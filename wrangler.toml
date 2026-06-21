@@ -1,0 +1,7 @@
+name = "infogap"
+compatibility_date = "2025-06-01"
+
+[[d1_databases]]
+binding = "DB"
+database_name = "infogap"
+database_id = "REPLACE_AFTER_d1_create"   # `wrangler d1 create infogap` prints this

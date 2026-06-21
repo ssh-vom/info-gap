@@ -1,0 +1,8 @@
+[    2168ms] [INFO] %cDownload the React DevTools for a better development experience: https://reactjs.org/link/react-devtools font-weight:bold @ http://localhost:4323/node_modules/.vite/deps/chunk-N63XCNVK.js?v=684d55d4:21608
+[    2581ms] [ERROR] Failed to load resource: the server responded with a status of 404 (Not Found) @ http://localhost:4323/node_modules/.vite/deps/audit-EHVU6HSC.js?v=684d55d4:0
+[    2581ms] [ERROR] Failed to load resource: the server responded with a status of 404 (Not Found) @ http://localhost:4323/node_modules/.vite/deps/xray-YEJJ3DZR.js?v=684d55d4:0
+[    2581ms] [ERROR] Failed to load resource: the server responded with a status of 404 (Not Found) @ http://localhost:4323/node_modules/.vite/deps/toolbar-Y2L47DWX.js?v=684d55d4:0
+[    2589ms] Failed to fetch dynamically imported module: http://localhost:4323/node_modules/.vite/deps/audit-EHVU6HSC.js?v=684d55d4
+[    2766ms] [INFO] %cDownload the React DevTools for a better development experience: https://reactjs.org/link/react-devtools font-weight:bold @ http://localhost:4323/node_modules/.vite/deps/chunk-N63XCNVK.js?v=d276a6ba:21608
+[   32985ms] [ERROR] Failed to load resource: the server responded with a status of 400 (Bad Request) @ http://localhost:4323/api/posts:0
+[   33503ms] [ERROR] Failed to load resource: the server responded with a status of 400 (Bad Request) @ http://localhost:4323/api/posts:0

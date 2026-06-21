@@ -1,12 +1,11 @@
 ---
+export const prerender = false;
 import Layout from '../layouts/Layout.astro';
-import { getCollection } from 'astro:content';
 import GuideCard from '../components/GuideCard.astro';
 import KnowledgeMap from '../components/KnowledgeMap.astro';
+import { getDb, listPosts } from '../lib/db';
 
-const guides = (await getCollection('guides')).sort(
-  (a, b) => b.data.published.valueOf() - a.data.published.valueOf()
-);
+const guides = await listPosts(getDb());
 ---
 
 <Layout>
@@ -56,13 +55,18 @@ const guides = (await getCollection('guides')).sort(
   </section>
 
   <section id="guides" class="max-w-3xl mx-auto px-6 pb-24">
+    <div class="flex justify-end mb-4">
+      <a href="/edit" class="text-sm font-medium hover:opacity-70 transition-opacity" style="color: var(--maroon);">
+        ✎ New post
+      </a>
+    </div>
     <div class="grid gap-px" style="background: var(--border);">
-      {guides.map((g) => <GuideCard guide={g} />)}
+      {guides.map((post) => <GuideCard post={post} />)}
     </div>
 
     {guides.length === 0 && (
       <p class="text-center py-20" style="color: var(--text-soft);">
-        No guides yet. Drop a markdown file in <code>src/guides/</code> to begin.
+        No guides yet. <a href="/edit" class="underline" style="color: var(--maroon);">Write the first one →</a>
       </p>
     )}
   </section>

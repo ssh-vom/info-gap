@@ -1,0 +1,70 @@
+- generic [ref=e1]:
+  - navigation [ref=e2]:
+    - link "InfoGap home" [ref=e3] [cursor=pointer]:
+      - /url: /
+      - generic [ref=e4]: InfoGap
+    - generic [ref=e5] [cursor=pointer]:
+      - text: Streams ▾
+      - combobox "Streams ▾" [ref=e6]:
+        - option [selected]
+        - option "Mechatronics Engineering"
+        - option "Software Engineering"
+        - option "Electrical Engineering"
+        - option "Computer Engineering"
+        - option "Mechanical Engineering"
+        - option "Civil Engineering"
+        - option "Chemical Engineering"
+        - option "Materials Engineering"
+        - option "Engineering Physics"
+        - option "Biomedical Engineering"
+  - main [ref=e8]:
+    - generic [ref=e9]:
+      - link "← back" [ref=e11] [cursor=pointer]:
+        - /url: /
+      - generic [ref=e12]:
+        - generic [ref=e13]:
+          - textbox "Title" [ref=e14]
+          - generic [ref=e15]:
+            - textbox "url-slug" [ref=e16]
+            - combobox [ref=e17]:
+              - option "Mechatronics Engineering" [selected]
+              - option "Software Engineering"
+              - option "Electrical Engineering"
+              - option "Computer Engineering"
+              - option "Mechanical Engineering"
+              - option "Civil Engineering"
+              - option "Chemical Engineering"
+              - option "Materials Engineering"
+              - option "Engineering Physics"
+              - option "Biomedical Engineering"
+          - generic [ref=e18]:
+            - textbox "Author" [ref=e19]
+            - textbox "Role (e.g. Mechatronics '25)" [ref=e20]
+          - generic [ref=e21]:
+            - textbox [ref=e22]: 2026-06-21
+            - textbox "6 min" [ref=e23]
+          - textbox "tags, comma, separated" [ref=e24]
+          - textbox "YouTube URL (optional)" [ref=e25]
+          - textbox "# Write in markdown..." [active] [ref=e26]: "## Hello typing some **markdown** here to see if it reloads"
+          - button "Publish" [ref=e28]
+        - generic [ref=e29]:
+          - paragraph [ref=e30]: Preview
+          - generic [ref=e31]:
+            - heading "Hello" [level=2] [ref=e32]
+            - paragraph [ref=e33]:
+              - text: typing some
+              - strong [ref=e34]: markdown
+              - text: here to see if it reloads
+  - generic [ref=e37]:
+    - button "Menu" [ref=e38]:
+      - img [ref=e40]
+      - generic: Menu
+    - button "Inspect" [ref=e44]:
+      - img [ref=e46]
+      - generic: Inspect
+    - button "Audit" [ref=e48]:
+      - img [ref=e50]
+      - generic: Audit
+    - button "Settings" [ref=e53]:
+      - img [ref=e55]
+      - generic: Settings

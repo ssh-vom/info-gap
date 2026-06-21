@@ -1,0 +1,167 @@
+---
+export const prerender = false;
+import Layout from '../../layouts/Layout.astro';
+import { STREAMS } from '../../streams';
+import { getDb, getPost } from '../../lib/db';
+import DiagramModal from '../../components/DiagramModal.tsx';
+
+const slug = Astro.params.slug;
+const post = slug ? await getPost(getDb(), slug) : null;
+if (slug && !post) return new Response('Not found', { status: 404 });
+
+const today = new Date().toISOString().slice(0, 10);
+const v = {
+  slug: post?.slug ?? '',
+  title: post?.title ?? '',
+  author: post?.author ?? '',
+  role: post?.role ?? '',
+  stream: post?.stream ?? STREAMS[0].slug,
+  tags: post?.tags.join(', ') ?? '',
+  video: post?.video ?? '',
+  readingTime: post?.readingTime ?? '',
+  published: post ? new Date(post.published).toISOString().slice(0, 10) : today,
+  body: post?.body ?? '',
+};
+const editing = !!post;
+const field = 'w-full px-3 py-2 rounded-lg text-sm bg-transparent';
+const fieldStyle = 'border: 1px solid var(--border); color: var(--text);';
+---
+
+<Layout title={editing ? `Edit · ${v.title}` : 'New post · InfoGap'} description="Write a guide.">
+  <div class="max-w-6xl mx-auto px-6 py-10 fade-up">
+    <div class="mb-6 flex items-center justify-between">
+      <a href={editing ? `/guides/${v.slug}/` : '/'} class="text-sm hover:opacity-80" style="color: var(--text-soft);">← back</a>
+      <span id="status" class="text-sm" style="color: var(--text-soft);"></span>
+    </div>
+
+    <form id="editor" class="grid lg:grid-cols-2 gap-8" data-editing={String(editing)}>
+      <!-- left: fields + markdown -->
+      <div class="flex flex-col gap-3">
+        <input name="title" placeholder="Title" value={v.title} class={`${field} text-lg font-semibold`} style={fieldStyle} />
+        <div class="flex gap-3">
+          <input name="slug" placeholder="url-slug" value={v.slug} readonly={editing}
+            class={`${field} font-mono ${editing ? 'opacity-60' : ''}`} style={fieldStyle} />
+          <select name="stream" class={field} style={fieldStyle}>
+            {STREAMS.map((s) => <option value={s.slug} selected={s.slug === v.stream}>{s.name}</option>)}
+          </select>
+        </div>
+        <div class="flex gap-3">
+          <input name="author" placeholder="Author" value={v.author} class={field} style={fieldStyle} />
+          <input name="role" placeholder="Role (e.g. Mechatronics '25)" value={v.role} class={field} style={fieldStyle} />
+        </div>
+        <div class="flex gap-3">
+          <input name="published" type="date" value={v.published} class={field} style={fieldStyle} />
+          <input name="readingTime" placeholder="6 min" value={v.readingTime} class={field} style={fieldStyle} />
+        </div>
+        <input name="tags" placeholder="tags, comma, separated" value={v.tags} class={field} style={fieldStyle} />
+        <input name="video" placeholder="YouTube URL (optional)" value={v.video} class={field} style={fieldStyle} />
+        <div class="flex justify-end">
+          <button type="button" id="insert-diagram" class="text-sm font-medium hover:opacity-70 transition-opacity" style="color: var(--maroon);">
+            ✎ Insert diagram
+          </button>
+        </div>
+        <textarea name="body" placeholder="# Write in markdown..." rows="22"
+          class={`${field} font-mono leading-relaxed resize-y`} style={fieldStyle}>{v.body}</textarea>
+
+        <div class="flex items-center gap-4 pt-1">
+          <button type="submit" class="px-5 py-2 rounded-lg text-sm font-semibold" style="background: var(--maroon); color: white;">
+            {editing ? 'Save' : 'Publish'}
+          </button>
+          {editing && (
+            <button type="button" id="delete" class="text-sm hover:opacity-70" style="color: var(--text-soft);">Delete</button>
+          )}
+        </div>
+      </div>
+
+      <!-- right: live preview -->
+      <div>
+        <p class="text-xs uppercase tracking-wider mb-3" style="color: var(--text-soft);">Preview</p>
+        <div id="preview" class="prose-guide"></div>
+      </div>
+    </form>
+  </div>
+
+  <!-- Excalidraw lives only on this editor page; client:only keeps React off public pages -->
+  <DiagramModal client:only="react" />
+
+  <script>
+    import { render } from '../../lib/md';
+
+    const form = document.getElementById('editor') as HTMLFormElement;
+    const body = form.body as HTMLTextAreaElement;
+    const titleEl = form.title as HTMLInputElement;
+    const slugEl = form.slug as HTMLInputElement;
+    const preview = document.getElementById('preview')!;
+    const status = document.getElementById('status')!;
+    const editing = form.dataset.editing === 'true';
+
+    const slugify = (s: string) =>
+      s.toLowerCase().trim().replace(/[^a-z0-9]+/g, '-').replace(/^-+|-+$/g, '').slice(0, 80);
+
+    const draw = () => (preview.innerHTML = render(body.value));
+    body.addEventListener('input', draw);
+    draw();
+
+    // diagrams: open the Excalidraw island, then splice its image at the caret on insert
+    document
+      .getElementById('insert-diagram')!
+      .addEventListener('click', () => window.dispatchEvent(new CustomEvent('diagram:open')));
+
+    window.addEventListener('diagram:insert', (e) => {
+      const id = (e as CustomEvent).detail.id;
+      const md = `\n![diagram](/api/diagrams/${id}.svg)\n`;
+      const at = body.selectionStart ?? body.value.length;
+      body.value = body.value.slice(0, at) + md + body.value.slice(at);
+      body.dispatchEvent(new Event('input', { bubbles: true })); // redraw preview
+      body.focus();
+      const caret = at + md.length;
+      body.setSelectionRange(caret, caret);
+    });
+
+    // auto-fill slug from title for new posts until the user edits it
+    if (!editing) {
+      let slugTouched = false;
+      slugEl.addEventListener('input', () => (slugTouched = true));
+      titleEl.addEventListener('input', () => {
+        if (!slugTouched) slugEl.value = slugify(titleEl.value);
+      });
+    }
+
+    form.addEventListener('submit', async (e) => {
+      e.preventDefault();
+      const f = new FormData(form);
+      const payload = {
+        slug: f.get('slug'),
+        title: f.get('title'),
+        author: f.get('author'),
+        role: f.get('role'),
+        stream: f.get('stream'),
+        published: f.get('published'),
+        readingTime: f.get('readingTime'),
+        video: f.get('video'),
+        tags: String(f.get('tags') || '').split(',').map((t) => t.trim()).filter(Boolean),
+        body: f.get('body'),
+      };
+      status.textContent = 'Saving…';
+      const res = await fetch('/api/posts', {
+        method: 'POST',
+        headers: { 'content-type': 'application/json' },
+        body: JSON.stringify(payload),
+      });
+      if (res.ok) {
+        const { slug } = await res.json();
+        location.href = `/guides/${slug}/`;
+      } else {
+        const { error } = await res.json().catch(() => ({ error: res.statusText }));
+        status.textContent = `Error: ${error}`;
+      }
+    });
+
+    document.getElementById('delete')?.addEventListener('click', async () => {
+      if (!confirm('Delete this post?')) return;
+      const res = await fetch(`/api/posts?slug=${encodeURIComponent(slugEl.value)}`, { method: 'DELETE' });
+      if (res.ok) location.href = '/';
+      else status.textContent = 'Delete failed';
+    });
+  </script>
+</Layout>

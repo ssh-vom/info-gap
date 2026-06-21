@@ -1,17 +1,14 @@
 ---
+export const prerender = false;
 import Layout from '../../layouts/Layout.astro';
-import { getCollection } from 'astro:content';
 import GuideCard from '../../components/GuideCard.astro';
 import { STREAMS } from '../../streams';
+import { getDb, listPosts } from '../../lib/db';
 
-export async function getStaticPaths() {
-  return STREAMS.map((s) => ({ params: { stream: s.slug }, props: { stream: s } }));
-}
+const stream = STREAMS.find((s) => s.slug === Astro.params.stream);
+if (!stream) return new Response('Not found', { status: 404 });
 
-const { stream } = Astro.props;
-const guides = (await getCollection('guides'))
-  .filter((g) => g.data.stream === stream.slug)
-  .sort((a, b) => b.data.published.valueOf() - a.data.published.valueOf());
+const guides = await listPosts(getDb(), stream.slug);
 ---
 
 <Layout title={`${stream.name} · InfoGap`} description={`Guides for ${stream.name} at McMaster.`}>
@@ -29,11 +26,11 @@ const guides = (await getCollection('guides'))
   <section class="max-w-3xl mx-auto px-6 pb-24">
     {guides.length > 0 ? (
       <div class="grid gap-px" style="background: var(--border);">
-        {guides.map((g) => <GuideCard guide={g} />)}
+        {guides.map((post) => <GuideCard post={post} />)}
       </div>
     ) : (
       <p class="text-center py-20" style="color: var(--text-soft);">
-        No guides for {stream.name} yet. Know someone? <a href="/mentors" class="underline" style="color: var(--maroon);">Point them here.</a>
+        No guides for {stream.name} yet. <a href="/edit" class="underline" style="color: var(--maroon);">Write one →</a>
       </p>
     )}
   </section>

@@ -1,61 +1,59 @@
 ---
+export const prerender = false;
 import Layout from '../../layouts/Layout.astro';
-import { getCollection, render } from 'astro:content';
+import { getDb, getPost } from '../../lib/db';
+import { render } from '../../lib/md';
 
-export async function getStaticPaths() {
-  const guides = await getCollection('guides');
-  return guides.map((g) => ({ params: { slug: g.id }, props: { guide: g } }));
-}
+const guide = await getPost(getDb(), Astro.params.slug!);
+if (!guide) return new Response('Not found', { status: 404 });
 
-const { guide } = Astro.props;
-const { Content } = await render(guide);
+const html = render(guide.body);
 
-function fmtDate(d: Date) {
-  return d.toLocaleDateString('en-US', { month: 'long', year: 'numeric' });
+function fmtDate(d: string) {
+  return new Date(d).toLocaleDateString('en-US', { month: 'long', year: 'numeric' });
 }
 
 // turn any youtube URL into embed
-function ytEmbed(url?: string) {
+function ytEmbed(url?: string | null) {
   if (!url) return null;
   const id = url.match(/(?:v=|youtu\.be\/)([\w-]{11})/)?.[1];
   return id ? `https://www.youtube.com/embed/${id}` : null;
 }
-const embed = ytEmbed(guide.data.video);
+const embed = ytEmbed(guide.video);
 ---
 
-<Layout title={`${guide.data.title} · InfoGap`} description={guide.data.title}>
+<Layout title={`${guide.title} · InfoGap`} description={guide.title}>
   <article class="max-w-3xl mx-auto px-6 pt-16 fade-up">
-    <div class="mb-8">
+    <div class="mb-8 flex items-center justify-between">
       <a href="/" class="text-sm transition-colors hover:opacity-80" style="color: var(--text-soft);">← all guides</a>
+      <a href={`/edit/${guide.slug}`} class="text-sm hover:opacity-70 transition-opacity" style="color: var(--maroon);">✎ Edit</a>
     </div>
 
     <header class="mb-10">
       <p class="text-xs uppercase tracking-wider mb-5" style="color: var(--text-soft);">
-        {guide.data.tags.join('  ·  ')}
+        {guide.tags.join('  ·  ')}
       </p>
       <h1 class="text-4xl sm:text-5xl font-bold tracking-tight leading-[1.08]">
-        {guide.data.title}
+        {guide.title}
       </h1>
       <div class="mt-6 flex items-center gap-3 text-sm" style="color: var(--text-soft);">
         <div class="w-9 h-9 rounded-full flex items-center justify-center font-semibold text-sm" style="background: var(--maroon-soft); color: var(--maroon);">
-          {guide.data.author.charAt(0)}
+          {guide.author.charAt(0)}
         </div>
         <div>
-          <div style="color: var(--text);">{guide.data.author}</div>
-          <div>{guide.data.role ?? ''}{guide.data.role && ' · '}{fmtDate(guide.data.published)}</div>
+          <div style="color: var(--text);">{guide.author}</div>
+          <div>{guide.role ?? ''}{guide.role && ' · '}{fmtDate(guide.published)}</div>
         </div>
       </div>
     </header>
 
     {embed && (
       <div class="mb-10 rounded-xl overflow-hidden aspect-video" style="border: 1px solid var(--border);">
-        <iframe src={embed} class="w-full h-full" title={guide.data.title} frameborder="0" allow="accelerometer; autoplay; clipboard-write; encrypted-media; gyroscope; picture-in-picture" allowfullscreen></iframe>
+        <iframe src={embed} class="w-full h-full" title={guide.title} frameborder="0" allow="accelerometer; autoplay; clipboard-write; encrypted-media; gyroscope; picture-in-picture" allowfullscreen></iframe>
       </div>
     )}
 
-    <div class="prose-guide">
-      <Content />
-    </div>
+    <div class="prose-guide" set:html={html}></div>
 
     <hr class="my-12" style="border-color: var(--border);" />
     <div class="text-sm" style="color: var(--text-soft);">

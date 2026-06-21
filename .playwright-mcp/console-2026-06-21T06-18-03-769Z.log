@@ -1,0 +1,9 @@
+[    1423ms] [INFO] %cDownload the React DevTools for a better development experience: https://reactjs.org/link/react-devtools font-weight:bold @ http://localhost:4323/node_modules/.vite/deps/chunk-CJSRII5H.js?v=80f50ea5:21608
+[    2026ms] [INFO] %cDownload the React DevTools for a better development experience: https://reactjs.org/link/react-devtools font-weight:bold @ http://localhost:4323/node_modules/.vite/deps/chunk-CJSRII5H.js?v=315eaa14:21608
+[    3177ms] [ERROR] [astro-island] Error hydrating /Users/shivom/projects/infogap/src/components/DiagramModal.tsx SyntaxError: The requested module '/node_modules/es6-promise-pool/es6-promise-pool.js?v=315eaa14' does not provide an export named 'default' @ http://localhost:4323/edit:938
+[   36249ms] [ERROR] Failed to load resource: the server responded with a status of 500 (Internal Server Error) @ http://localhost:4323/edit:0
+[   41650ms] [LOG] [vite] server connection lost. Polling for restart... @ http://localhost:4323/@vite/client:1598
+[   49780ms] [INFO] %cDownload the React DevTools for a better development experience: https://reactjs.org/link/react-devtools font-weight:bold @ http://localhost:4323/node_modules/.vite/deps/chunk-N63XCNVK.js?v=b0a14639:21608
+[   50261ms] [ERROR] Failed to load resource: the server responded with a status of 404 (Not Found) @ http://localhost:4323/node_modules/.vite/deps/audit-W5USTMLP.js?v=b0a14639:0
+[   50274ms] Failed to fetch dynamically imported module: http://localhost:4323/node_modules/.vite/deps/audit-W5USTMLP.js?v=b0a14639
+[   50429ms] [INFO] %cDownload the React DevTools for a better development experience: https://reactjs.org/link/react-devtools font-weight:bold @ http://localhost:4323/node_modules/.vite/deps/chunk-N63XCNVK.js?v=c4875a44:21608
