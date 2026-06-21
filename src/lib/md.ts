@@ -34,8 +34,9 @@ export function render(md: string): string {
 }
 
 // run check: node --experimental-strip-types src/lib/md.ts
-// (guarded so it never evaluates in the Workers runtime or the browser, where `process` is undefined)
-if (typeof process !== 'undefined' && import.meta.url === `file://${process.argv[1]}`) {
+// (workerd defines `process` but NOT `process.argv`, so gate on argv — else this
+//  throws on import in the Worker and 500s any page that calls render())
+if (typeof process !== 'undefined' && import.meta.url === `file://${process.argv?.[1]}`) {
   const out = render('# hi\n\n<script>alert(1)</script>\n\n[x](javascript:alert(1)) [ok](https://a.com)');
   console.assert(!out.includes('<script>'), 'raw HTML must be dropped');
   console.assert(!out.includes('javascript:'), 'js: scheme must be neutralized');
