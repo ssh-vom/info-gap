@@ -3,6 +3,12 @@ dist/
 # generated types
 .astro/
 
+# local wrangler/miniflare state (D1 sqlite, KV, etc.) — never deploy-relevant
+.wrangler/
+
+# playwright-mcp browser test artifacts
+.playwright-mcp/
+
 # dependencies
 node_modules/
 
