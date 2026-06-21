@@ -1,0 +1,257 @@
+---
+// Hero "knowledge map": scattered, unconnected info (twinkling ghost field) vs.
+// the guided path someone hands you — with a gold bridge leaping the gap,
+// echoing the logo. Geometry is generated client-side; motion respects
+// prefers-reduced-motion. See svg-motion.
+---
+
+<div class="knowledge-map relative h-[300px] lg:h-[380px]">
+  <svg class="absolute inset-0 h-full w-full" viewBox="0 0 720 430" fill="none" aria-hidden="true">
+    <g class="ghost" data-ghost></g>
+    <g data-trail></g>
+
+    <!-- hand-drawn annotations: each points to the moment it describes -->
+    <g class="km-anno km-anno--soft" style="--at:.8s; --al:.9s; --ah:1.5s">
+      <text class="km-anno-text" x="58" y="382" text-anchor="start">You are here</text>
+      <path class="km-anno-line" d="M120 364 Q104 350 112 334" />
+      <path class="km-anno-head" d="M111 330 L106.5 339 L115.5 339 Z" />
+    </g>
+
+    <g class="km-anno km-anno--gold" style="--at:2.1s; --al:2.2s; --ah:2.8s">
+      <text class="km-anno-text" x="455" y="394" text-anchor="middle">The missing piece</text>
+      <path class="km-anno-line" d="M455 378 Q451 330 462 296" />
+      <path class="km-anno-head" d="M462 291 L457.5 300 L466.5 300 Z" />
+    </g>
+
+    <g class="km-anno km-anno--maroon" style="--at:3.0s; --al:3.1s; --ah:3.7s">
+      <text class="km-anno-text" x="565" y="92" text-anchor="middle">Where you want to be</text>
+      <path class="km-anno-line" d="M588 106 Q612 120 608 138" />
+      <path class="km-anno-head" d="M609 143 L603.5 135 L614.5 135 Z" />
+    </g>
+  </svg>
+</div>
+
+<!-- is:global because the SVG geometry is created in JS (createElementNS) and
+     would otherwise miss Astro's scoping attribute; every rule is namespaced
+     under .knowledge-map so nothing leaks. -->
+<style is:global>
+  /* scattered, unconnected knowledge — soft, desynced twinkle */
+  .knowledge-map .ghost circle {
+    fill: var(--text-soft);
+    transform-box: fill-box;
+    transform-origin: center;
+    animation: km-twinkle var(--dur, 4s) ease-in-out var(--delay, 0s) infinite;
+  }
+  @keyframes km-twinkle {
+    0%, 100% { opacity: 0.10; transform: scale(0.8); }
+    50%      { opacity: 0.40; transform: scale(1.1); }
+  }
+
+  /* the path someone hands you — draws itself in, then stays */
+  .knowledge-map .km-line {
+    fill: none;
+    stroke: var(--border);
+    stroke-width: 1.5;
+    stroke-linecap: round;
+    stroke-linejoin: round;
+    stroke-dasharray: var(--len) var(--len);
+    stroke-dashoffset: var(--len);
+    animation: km-draw 2.6s ease-in-out 0.3s forwards;
+  }
+  @keyframes km-draw { to { stroke-dashoffset: 0; } }
+
+  /* the gap leap — gold bridge, echoes the logo */
+  .knowledge-map .km-bridge {
+    fill: none;
+    stroke: var(--gold);
+    stroke-width: 2;
+    stroke-linecap: round;
+    stroke-dasharray: 1 8;
+    opacity: 0;
+    animation:
+      km-bridge-in 0.6s ease-out 2.0s forwards,
+      km-bridge-flow 1.1s linear 2.6s infinite;
+  }
+  @keyframes km-bridge-in { to { opacity: 0.9; } }
+  @keyframes km-bridge-flow { to { stroke-dashoffset: -18; } }
+
+  /* waypoint nodes — pop in as the line reaches them */
+  .knowledge-map .km-node {
+    fill: var(--bg);
+    stroke: var(--text-soft);
+    stroke-width: 1.5;
+    transform-box: fill-box;
+    transform-origin: center;
+    opacity: 0;
+    transform: scale(0);
+    animation: km-pop 0.45s cubic-bezier(.34, 1.56, .64, 1) var(--delay) forwards;
+  }
+  @keyframes km-pop { to { opacity: 1; transform: scale(1); } }
+
+  /* destination — maroon, glows when reached */
+  .knowledge-map .km-dest {
+    fill: var(--maroon);
+    transform-box: fill-box;
+    transform-origin: center;
+    opacity: 0;
+    transform: scale(0);
+    animation:
+      km-pop 0.5s cubic-bezier(.34, 1.56, .64, 1) 2.7s forwards,
+      km-pulse 2.4s ease-in-out 3.2s infinite;
+    filter: drop-shadow(0 0 6px color-mix(in srgb, var(--maroon) 70%, transparent));
+  }
+  .knowledge-map .km-halo {
+    fill: var(--maroon);
+    transform-box: fill-box;
+    transform-origin: center;
+    opacity: 0;
+    animation: km-halo 2.4s ease-out 3.2s infinite;
+  }
+  @keyframes km-pulse { 0%, 100% { transform: scale(1); } 50% { transform: scale(1.12); } }
+  @keyframes km-halo {
+    0%   { opacity: 0.35; transform: scale(0.6); }
+    70%  { opacity: 0;    transform: scale(2.6); }
+    100% { opacity: 0; }
+  }
+
+  /* annotations — label, then a curve that draws to the target, then an arrowhead */
+  .knowledge-map .km-anno-text {
+    font-family: var(--font-sans);
+    font-size: 14px;
+    font-weight: 500;
+    letter-spacing: 1.2px;
+    text-transform: uppercase;
+    opacity: 0;
+    transform: translateY(4px);
+    animation: km-anno-text 0.6s ease-out var(--at) forwards;
+  }
+  @keyframes km-anno-text { to { opacity: 1; transform: translateY(0); } }
+
+  .knowledge-map .km-anno-line {
+    fill: none;
+    stroke-width: 1.4;
+    stroke-linecap: round;
+    opacity: 0.85;
+    stroke-dasharray: 90;
+    stroke-dashoffset: 90;
+    animation: km-anno-draw 0.7s ease-in-out var(--al) forwards;
+  }
+  @keyframes km-anno-draw { to { stroke-dashoffset: 0; } }
+
+  .knowledge-map .km-anno-head {
+    transform-box: fill-box;
+    transform-origin: center;
+    opacity: 0;
+    transform: scale(0);
+    animation: km-pop 0.4s cubic-bezier(.34, 1.56, .64, 1) var(--ah) forwards;
+  }
+
+  .knowledge-map .km-anno--soft .km-anno-text,
+  .knowledge-map .km-anno--soft .km-anno-head { fill: var(--text-soft); }
+  .knowledge-map .km-anno--soft .km-anno-line { stroke: var(--text-soft); }
+
+  .knowledge-map .km-anno--gold .km-anno-text,
+  .knowledge-map .km-anno--gold .km-anno-head { fill: var(--gold); }
+  .knowledge-map .km-anno--gold .km-anno-line { stroke: var(--gold); }
+
+  .knowledge-map .km-anno--maroon .km-anno-text,
+  .knowledge-map .km-anno--maroon .km-anno-head { fill: var(--maroon); }
+  .knowledge-map .km-anno--maroon .km-anno-line { stroke: var(--maroon); }
+
+  @media (prefers-reduced-motion: reduce) {
+    .knowledge-map .ghost circle { animation: none; opacity: 0.25; transform: none; }
+    .knowledge-map .km-line { animation: none; stroke-dashoffset: 0; }
+    .knowledge-map .km-bridge { animation: none; opacity: 0.9; }
+    .knowledge-map .km-node { animation: none; opacity: 1; transform: none; }
+    .knowledge-map .km-dest { animation: none; opacity: 1; transform: none; }
+    .knowledge-map .km-halo { animation: none; opacity: 0; }
+    .knowledge-map .km-anno-text { animation: none; opacity: 1; transform: none; }
+    .knowledge-map .km-anno-line { animation: none; stroke-dashoffset: 0; }
+    .knowledge-map .km-anno-head { animation: none; opacity: 1; transform: none; }
+  }
+</style>
+
+<script>
+  const NS = "http://www.w3.org/2000/svg";
+
+  function buildMap(root: Element) {
+    const ghost = root.querySelector<SVGGElement>("[data-ghost]");
+    const trail = root.querySelector<SVGGElement>("[data-trail]");
+    if (!ghost || !trail || trail.childElementCount) return; // already built
+
+    // deterministic PRNG so the field is stable across renders
+    let seed = 7;
+    const rnd = () => (seed = (seed * 1103515245 + 12345) & 0x7fffffff) / 0x7fffffff;
+
+    // --- scattered ghost field: jittered grid reads as a "field", not soup
+    const cols = 9, rows = 5, padX = 70, padY = 60;
+    const stepX = (720 - padX * 2) / (cols - 1);
+    const stepY = (430 - padY * 2) / (rows - 1);
+    for (let r = 0; r < rows; r++) {
+      for (let c = 0; c < cols; c++) {
+        if (rnd() < 0.18) continue; // sparse gaps
+        const cx = padX + c * stepX + (rnd() - 0.5) * stepX * 0.7;
+        const cy = padY + r * stepY + (rnd() - 0.5) * stepY * 0.7;
+        const dot = document.createElementNS(NS, "circle");
+        dot.setAttribute("cx", cx.toFixed(1));
+        dot.setAttribute("cy", cy.toFixed(1));
+        dot.setAttribute("r", (2.4 + rnd() * 1.6).toFixed(2));
+        dot.style.setProperty("--delay", (-(rnd() * 4)).toFixed(2) + "s");
+        dot.style.setProperty("--dur", (3.2 + rnd() * 2.4).toFixed(2) + "s");
+        ghost.appendChild(dot);
+      }
+    }
+
+    // --- the guided trail with a deliberate gap the gold bridge leaps
+    const pts: [number, number][] = [
+      [110, 320], [205, 338], [300, 286], // first cluster
+      [410, 322],                         // -- gap here --
+      [520, 232], [610, 150],             // after the leap, climbing to destination
+    ];
+    const gapFrom = 3, gapTo = 4;
+    const d = (points: [number, number][]) =>
+      points.map((p, i) => (i ? "L" : "M") + p[0] + " " + p[1]).join(" ");
+
+    // one path, two subpaths, so a single draw sweeps both halves
+    const line = document.createElementNS(NS, "path");
+    line.setAttribute("d", d(pts.slice(0, gapFrom + 1)) + " " + d(pts.slice(gapTo)));
+    line.setAttribute("class", "km-line");
+    trail.appendChild(line);
+
+    const bridge = document.createElementNS(NS, "path");
+    bridge.setAttribute("d", d([pts[gapFrom], pts[gapTo]]));
+    bridge.setAttribute("class", "km-bridge");
+    trail.appendChild(bridge);
+
+    pts.slice(0, -1).forEach((p, i) => {
+      const node = document.createElementNS(NS, "circle");
+      node.setAttribute("cx", String(p[0]));
+      node.setAttribute("cy", String(p[1]));
+      node.setAttribute("r", "5");
+      node.setAttribute("class", "km-node");
+      node.style.setProperty("--delay", 0.5 + i * 0.42 + "s");
+      trail.appendChild(node);
+    });
+
+    const last = pts[pts.length - 1];
+    for (const [cls, r] of [["km-halo", "8"], ["km-dest", "7"]] as const) {
+      const c = document.createElementNS(NS, "circle");
+      c.setAttribute("cx", String(last[0]));
+      c.setAttribute("cy", String(last[1]));
+      c.setAttribute("r", r);
+      c.setAttribute("class", cls);
+      trail.appendChild(c);
+    }
+
+    // measure actual path length so the draw animation is exact
+    line.style.setProperty("--len", String(Math.ceil(line.getTotalLength())));
+  }
+
+  function init() {
+    document.querySelectorAll(".knowledge-map").forEach(buildMap);
+  }
+
+  init();
+  // re-run after Astro view transitions
+  document.addEventListener("astro:page-load", init);
+</script>

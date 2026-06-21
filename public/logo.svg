@@ -1,0 +1,7 @@
+<svg xmlns="http://www.w3.org/2000/svg" viewBox="0 0 64 64" fill="none">
+  <!-- two offset halves, 180deg rotational symmetry; each leans against the diagonal -->
+  <path fill="#BC1E54" d="M37 14 H52 L43 31 H28 Z" />
+  <path fill="#BC1E54" d="M27 50 H12 L21 33 H36 Z" />
+  <!-- gold bridge spanning the gap -->
+  <path fill="#FDBF57" d="M24 31 L40 21 L43 27 L27 37 Z" />
+</svg>

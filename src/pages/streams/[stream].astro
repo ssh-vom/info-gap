@@ -1,0 +1,40 @@
+---
+import Layout from '../../layouts/Layout.astro';
+import { getCollection } from 'astro:content';
+import GuideCard from '../../components/GuideCard.astro';
+import { STREAMS } from '../../streams';
+
+export async function getStaticPaths() {
+  return STREAMS.map((s) => ({ params: { stream: s.slug }, props: { stream: s } }));
+}
+
+const { stream } = Astro.props;
+const guides = (await getCollection('guides'))
+  .filter((g) => g.data.stream === stream.slug)
+  .sort((a, b) => b.data.published.valueOf() - a.data.published.valueOf());
+---
+
+<Layout title={`${stream.name} · InfoGap`} description={`Guides for ${stream.name} at McMaster.`}>
+  <section class="max-w-3xl mx-auto px-6 pt-20 pb-10 fade-up">
+    <div class="mb-8">
+      <a href="/" class="text-sm transition-colors hover:opacity-80" style="color: var(--text-soft);">← all guides</a>
+    </div>
+    <p class="text-xs uppercase tracking-wider mb-4" style="color: var(--text-soft);">Stream</p>
+    <h1 class="text-4xl sm:text-5xl font-bold tracking-tight">{stream.name}</h1>
+    <p class="mt-4 text-lg" style="color: var(--text-soft);">
+      {guides.length} guide{guides.length === 1 ? '' : 's'} from people who've been through it.
+    </p>
+  </section>
+
+  <section class="max-w-3xl mx-auto px-6 pb-24">
+    {guides.length > 0 ? (
+      <div class="grid gap-px" style="background: var(--border);">
+        {guides.map((g) => <GuideCard guide={g} />)}
+      </div>
+    ) : (
+      <p class="text-center py-20" style="color: var(--text-soft);">
+        No guides for {stream.name} yet. Know someone? <a href="/mentors" class="underline" style="color: var(--maroon);">Point them here.</a>
+      </p>
+    )}
+  </section>
+</Layout>

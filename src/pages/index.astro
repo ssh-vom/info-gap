@@ -1,0 +1,136 @@
+---
+import Layout from '../layouts/Layout.astro';
+import { getCollection } from 'astro:content';
+import GuideCard from '../components/GuideCard.astro';
+import KnowledgeMap from '../components/KnowledgeMap.astro';
+
+const guides = (await getCollection('guides')).sort(
+  (a, b) => b.data.published.valueOf() - a.data.published.valueOf()
+);
+---
+
+<Layout>
+  <!-- gate the intro: play once per session on a real page load, not on client-side nav back home.
+       Runs before the veil is parsed, so the disabled case never flashes. -->
+  <script is:inline>
+    if (sessionStorage.getItem("infogap:introSeen")) {
+      document.documentElement.classList.add("no-intro");
+    } else {
+      sessionStorage.setItem("infogap:introSeen", "1");
+    }
+  </script>
+
+  <!-- soft load-in: logo bridges its gap, thesis over a darkened/blurred site, then the veil lifts as we zoom in -->
+  <div class="intro-veil" aria-hidden="true">
+    <svg class="intro-logo" viewBox="0 0 64 64" fill="none">
+      <path class="il-right" d="M37 14 H52 L43 31 H28 Z" />
+      <path class="il-left" d="M27 50 H12 L21 33 H36 Z" />
+      <path class="il-bridge" d="M24 31 L40 21 L43 27 L27 37 Z" />
+    </svg>
+    <p class="intro-thesis">The knowledge they didn't hand you.</p>
+  </div>
+
+  <div class="intro-zoom">
+  <section class="max-w-6xl mx-auto px-6 pt-20 pb-14 fade-up">
+    <div class="grid lg:grid-cols-[0.9fr_1.1fr] gap-12 items-center">
+      <div>
+        <p class="text-xs uppercase tracking-wider mb-5" style="color: var(--text-soft);">McMaster · curated</p>
+        <h1 class="text-5xl sm:text-6xl font-bold tracking-tight leading-[1.02]">
+          The knowledge they didn't hand you.
+        </h1>
+        <p class="mt-6 text-lg max-w-xl" style="color: var(--text-soft);">
+          Practical paths from McMaster students and alumni who already figured it out.
+        </p>
+        <div class="mt-8 flex items-center gap-8 text-sm font-medium">
+          <a href="#guides" class="underline underline-offset-4" style="color: var(--maroon);">
+            Explore guides →
+          </a>
+          <a href="/mentors" class="hover:opacity-70 transition-opacity" style="color: var(--text-soft);">
+            Meet mentors
+          </a>
+        </div>
+      </div>
+
+      <KnowledgeMap />
+    </div>
+  </section>
+
+  <section id="guides" class="max-w-3xl mx-auto px-6 pb-24">
+    <div class="grid gap-px" style="background: var(--border);">
+      {guides.map((g) => <GuideCard guide={g} />)}
+    </div>
+
+    {guides.length === 0 && (
+      <p class="text-center py-20" style="color: var(--text-soft);">
+        No guides yet. Drop a markdown file in <code>src/guides/</code> to begin.
+      </p>
+    )}
+  </section>
+  </div>
+
+  <style is:global>
+    /* gated off: skip the intro entirely (client-side nav / already seen this session) */
+    .no-intro .intro-veil { display: none; }
+    .no-intro .intro-zoom { animation: none; }
+
+    .intro-veil {
+      position: fixed;
+      inset: 0;
+      z-index: 60;
+      display: flex;
+      flex-direction: column;
+      align-items: center;
+      justify-content: center;
+      gap: 1.6rem;
+      padding: 1.5rem;
+      text-align: center;
+      pointer-events: none;
+      animation: intro-veil 2.6s ease-in-out forwards;
+    }
+    .intro-logo { width: clamp(52px, 7vw, 76px); height: auto; }
+    .intro-logo path { transform-box: fill-box; transform-origin: center; }
+    /* the two halves slide together, then the gold bridge pops in to close the gap */
+    .intro-logo .il-left  { fill: var(--maroon); animation: intro-logo-l 0.6s ease-out 0.1s both; }
+    .intro-logo .il-right { fill: var(--maroon); animation: intro-logo-r 0.6s ease-out 0.1s both; }
+    .intro-logo .il-bridge { fill: var(--gold); animation: intro-logo-b 0.5s cubic-bezier(.34,1.56,.64,1) 0.55s both; }
+
+    .intro-thesis {
+      max-width: 18ch;
+      font-family: var(--font-sans);
+      font-size: clamp(2rem, 6vw, 4rem);
+      font-weight: 700;
+      letter-spacing: -0.02em;
+      line-height: 1.05;
+      color: var(--text);
+      animation: intro-thesis 2.6s ease-in-out forwards;
+    }
+    /* the site content gently zooms in behind the lifting veil */
+    .intro-zoom { animation: intro-zoom 2.6s ease-in-out forwards; transform-origin: 50% 30%; }
+
+    @keyframes intro-logo-l { from { opacity: 0; transform: translate(-9px, 9px); } to { opacity: 1; transform: none; } }
+    @keyframes intro-logo-r { from { opacity: 0; transform: translate(9px, -9px); } to { opacity: 1; transform: none; } }
+    @keyframes intro-logo-b { from { opacity: 0; transform: scale(0.3); } to { opacity: 1; transform: none; } }
+
+    @keyframes intro-veil {
+      0%, 52%  { opacity: 1; background: rgba(8, 8, 9, 0.88);
+                 backdrop-filter: blur(14px); -webkit-backdrop-filter: blur(14px); }
+      100%     { opacity: 0; visibility: hidden; background: rgba(8, 8, 9, 0);
+                 backdrop-filter: blur(0); -webkit-backdrop-filter: blur(0); }
+    }
+    @keyframes intro-thesis {
+      0%   { opacity: 0; transform: scale(0.96); }
+      16%  { opacity: 1; transform: scale(1); }
+      52%  { opacity: 1; transform: scale(1); }
+      100% { opacity: 0; transform: scale(1.14); }
+    }
+    @keyframes intro-zoom {
+      0%, 40% { transform: scale(0.985); }
+      100%    { transform: none; }
+    }
+
+    @media (prefers-reduced-motion: reduce) {
+      .intro-veil { display: none; }
+      .intro-zoom { animation: none; }
+    }
+  </style>
+</Layout>

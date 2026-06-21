@@ -1,0 +1,102 @@
+---
+import '../styles/global.css';
+import { ClientRouter } from 'astro:transitions';
+import { STREAMS } from '../streams';
+const { title = 'InfoGap', description = 'Curated career knowledge from McMaster students and alumni.' } = Astro.props;
+const path = Astro.url.pathname;
+const isActive = (href: string) =>
+  href === '/' ? path === '/' : path.startsWith(href);
+---
+
+<!doctype html>
+<html lang="en" class="dark">
+  <head>
+    <meta charset="utf-8" />
+    <link rel="icon" type="image/svg+xml" href="/logo.svg" />
+    <link rel="icon" type="image/png" sizes="32x32" href="/favicon-32x32.png" />
+    <link rel="icon" href="/favicon.ico" sizes="any" />
+    <link rel="apple-touch-icon" href="/apple-touch-icon.png" />
+    <meta name="viewport" content="width=device-width, initial-scale=1" />
+    <meta name="generator" content={Astro.generator} />
+    <meta name="description" content={description} />
+    <link rel="preconnect" href="https://fonts.googleapis.com" />
+    <link rel="preconnect" href="https://fonts.gstatic.com" crossorigin />
+    <link href="https://fonts.googleapis.com/css2?family=Inter:wght@400;500;600;700&family=Newsreader:ital,opsz,wght@0,6..72,400;0,6..72,500;1,6..72,400&display=swap" rel="stylesheet" />
+    <title>{title}</title>
+    <ClientRouter />
+    <script>
+      // The homepage intro should only run on a real page load, never on a
+      // client-side (view transition) navigation back to home.
+      if (!(window as any).__introNavGuard) {
+        (window as any).__introNavGuard = true;
+        document.addEventListener("astro:before-swap", (e) => {
+          (e as any).newDocument.documentElement.classList.add("no-intro");
+        });
+      }
+    </script>
+    <style is:global>
+      @media (prefers-reduced-motion: no-preference) {
+        ::view-transition-old(root),
+        ::view-transition-new(root) { animation: none; }
+      }
+    </style>
+  </head>
+  <body class="min-h-screen antialiased">
+    <!-- mobile top nav -->
+    <nav class="lg:hidden sticky top-0 z-40 backdrop-blur-md border-b flex items-center justify-between px-6 h-14" style="border-color: var(--border); background: color-mix(in srgb, var(--bg) 80%, transparent);">
+      <a href="/" class="flex items-center gap-2 font-semibold tracking-tight text-lg" aria-label="InfoGap home">
+        <img src="/logo.svg" alt="" width="26" height="26" />
+        <span>InfoGap</span>
+      </a>
+      <label class="text-sm cursor-pointer" style="color: var(--maroon);">
+        Streams ▾
+        <select class="absolute opacity-0 w-px h-px" onchange="if(this.value) location.href=this.value">
+          <option value=""></option>
+          {STREAMS.map((s) => <option value={`/streams/${s.slug}/`}>{s.name}</option>)}
+        </select>
+      </label>
+    </nav>
+
+    <div class="lg:flex">
+      <!-- desktop sidebar -->
+      <aside class="hidden lg:flex flex-col fixed inset-y-0 left-0 w-64 border-r px-6 py-8" style="border-color: var(--border);">
+        <a href="/" class="flex items-center gap-3 font-semibold tracking-tight text-xl mb-10" aria-label="InfoGap home">
+          <img src="/logo.svg" alt="" width="30" height="30" />
+          <span>InfoGap</span>
+        </a>
+
+        <nav class="flex flex-col gap-1 text-sm">
+          <a href="/" class={`px-3 py-2 rounded-lg transition-colors ${isActive('/') && path === '/' ? 'font-medium' : ''}`} style={isActive('/') && path === '/' ? 'background: var(--maroon-soft); color: var(--maroon);' : 'color: var(--text-soft);'}>
+            All guides
+          </a>
+
+          <div class="mt-6 mb-2 px-3 text-[11px] font-medium tracking-wider" style="color: var(--text-soft);">STREAMS</div>
+          <div class="flex flex-col gap-0.5">
+            {STREAMS.map((s) => (
+              <a
+                href={`/streams/${s.slug}/`}
+                class="px-3 py-1.5 rounded-lg transition-colors text-[13px]"
+                style={isActive(`/streams/${s.slug}/`) ? 'background: var(--maroon-soft); color: var(--maroon); font-weight: 500;' : 'color: var(--text-soft);'}
+              >
+                {s.name.replace(' Engineering', '')}
+              </a>
+            ))}
+          </div>
+
+          <div class="mt-6 mb-2 px-3 text-[11px] font-medium tracking-wider" style="color: var(--text-soft);">NETWORK</div>
+          <a href="/mentors" class="px-3 py-1.5 rounded-lg transition-colors text-[13px]" style={isActive('/mentors') ? 'background: var(--maroon-soft); color: var(--maroon); font-weight: 500;' : 'color: var(--text-soft);'}>
+            Mentors
+          </a>
+        </nav>
+
+        <div class="mt-auto pt-8 text-xs" style="color: var(--text-soft);">
+          <div>~ Shivom</div>
+        </div>
+      </aside>
+
+      <main class="flex-1 lg:ml-64 min-w-0">
+        <slot />
+      </main>
+    </div>
+  </body>
+</html>
