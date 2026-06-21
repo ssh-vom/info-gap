@@ -1,20 +1,58 @@
 ---
 import Layout from '../layouts/Layout.astro';
+
+// Placeholder mentor directory — category is the headline (field > the individual),
+// name is the subtitle. Swap faces/names for real verified alumni later.
+// Shivom is first; replace `img` with a real photo at /public/mentors/shivom.jpg.
+const mentors = [
+  { cat: 'Founder', name: 'Shivom Sharma', img: 'https://i.pravatar.cc/600?img=12' },
+  { cat: 'Software', name: 'Aisha Khan', img: 'https://i.pravatar.cc/600?img=5' },
+  { cat: 'Hardware', name: 'Marcus Lee', img: 'https://i.pravatar.cc/600?img=13' },
+  { cat: 'Medicine', name: 'Priya Patel', img: 'https://i.pravatar.cc/600?img=9' },
+  { cat: 'Quant Finance', name: 'Daniel Cohen', img: 'https://i.pravatar.cc/600?img=33' },
+  { cat: 'Product', name: 'Sarah Nguyen', img: 'https://i.pravatar.cc/600?img=16' },
+  { cat: 'Data Science', name: 'Omar Hassan', img: 'https://i.pravatar.cc/600?img=60' },
+  { cat: 'Robotics', name: 'Emily Carter', img: 'https://i.pravatar.cc/600?img=20' },
+  { cat: 'Mechanical', name: 'Jason Park', img: 'https://i.pravatar.cc/600?img=51' },
+  { cat: 'UX Design', name: 'Hannah Brooks', img: 'https://i.pravatar.cc/600?img=45' },
+  { cat: 'Startups', name: 'Raj Mehta', img: 'https://i.pravatar.cc/600?img=68' },
+  { cat: 'Electrical', name: 'Chloe Martin', img: 'https://i.pravatar.cc/600?img=47' },
+  { cat: 'Consulting', name: 'David Okafor', img: 'https://i.pravatar.cc/600?img=59' },
+  { cat: 'Biomedical', name: 'Mia Rossi', img: 'https://i.pravatar.cc/600?img=24' },
+  { cat: 'Machine Learning', name: 'Kevin Tran', img: 'https://i.pravatar.cc/600?img=53' },
+  { cat: 'Research · PhD', name: 'Laura Simmons', img: 'https://i.pravatar.cc/600?img=44' },
+];
 ---
 
 <Layout title="Mentors · InfoGap">
-  <section class="max-w-3xl mx-auto px-6 pt-20 pb-24 fade-up">
+  <section class="max-w-3xl mx-auto px-6 pt-20 pb-10 fade-up">
     <p class="text-xs uppercase tracking-wider mb-4" style="color: var(--text-soft);">Coming soon</p>
     <h1 class="text-4xl sm:text-5xl font-bold tracking-tight leading-[1.05]">
       Talk to someone who's<br />already where you want to be.
     </h1>
     <p class="mt-6 text-lg max-w-xl" style="color: var(--text-soft);">
-      A verified directory of McMaster alumni across industries — software, hardware,
-      finance, research, med school, anything. Browse, pick someone in your target field,
+      A verified directory of McMaster alumni — pick a field, find someone who's done it,
       and request 20 minutes.
     </p>
+  </section>
 
-    <div class="mt-12 p-6 rounded-xl" style="background: var(--bg-soft); border: 1px solid var(--border);">
+  <!-- dim mosaic: each tile carries its field; hover focuses it and dims the rest -->
+  <div class="max-w-6xl mx-auto px-4 pb-6 fade-up">
+    <div class="m-grid">
+      {mentors.map((m) => (
+        <figure class="m-tile">
+          <img src={m.img} alt={`${m.name} — ${m.cat}`} loading="lazy" width="600" height="600" />
+          <figcaption class="m-overlay">
+            <span class="m-cat">{m.cat}</span>
+            <span class="m-name">{m.name}</span>
+          </figcaption>
+        </figure>
+      ))}
+    </div>
+  </div>
+
+  <section class="max-w-3xl mx-auto px-6 pt-10 pb-24">
+    <div class="p-6 rounded-xl" style="background: var(--bg-soft); border: 1px solid var(--border);">
       <h2 class="font-semibold mb-2">Are you an alum?</h2>
       <p class="text-sm" style="color: var(--text-soft);">
         If you'd take a short call with a current Mac student looking to break into
@@ -22,10 +60,71 @@ import Layout from '../layouts/Layout.astro';
         with your LinkedIn and graduation year. We'll verify and add you to the first cohort.
       </p>
     </div>
-
-    <p class="mt-8 text-sm" style="color: var(--text-soft);">
-      We're building this the moment the first guides ship and a few alums raise their hand.
-      No empty directories.
-    </p>
   </section>
 </Layout>
+
+<style>
+  .m-grid {
+    display: grid;
+    grid-template-columns: repeat(auto-fill, minmax(210px, 1fr));
+    gap: 4px;
+  }
+  .m-tile {
+    position: relative;
+    aspect-ratio: 16 / 10;
+    overflow: hidden;
+    background: #000;
+  }
+  .m-tile img {
+    position: absolute;
+    inset: 0;
+    width: 100%;
+    height: 100%;
+    object-fit: cover;
+    /* dim + slightly desaturated by default; comes into focus on hover */
+    filter: brightness(0.5) saturate(0.85);
+    transition: filter 0.35s ease, transform 0.5s ease;
+  }
+  .m-tile:hover { z-index: 1; }
+  .m-tile:hover img { filter: brightness(1.05) saturate(1.1); transform: scale(1.05); }
+
+  .m-overlay {
+    position: absolute;
+    inset: 0;
+    display: flex;
+    flex-direction: column;
+    align-items: center;
+    justify-content: center;
+    text-align: center;
+    gap: 3px;
+    padding: 10px;
+    pointer-events: none;
+    /* a soft scrim keeps text legible over any photo */
+    background: linear-gradient(180deg, rgba(0,0,0,0.25), rgba(0,0,0,0.45));
+    transition: background 0.35s ease;
+  }
+  .m-tile:hover .m-overlay { background: linear-gradient(180deg, rgba(0,0,0,0.1), rgba(0,0,0,0.55)); }
+  .m-cat {
+    font-family: var(--font-sans);
+    font-weight: 700;
+    text-transform: uppercase;
+    letter-spacing: 0.06em;
+    font-size: 1.05rem;
+    line-height: 1.15;
+    color: #fff;
+    text-shadow: 0 1px 8px rgba(0,0,0,0.7);
+  }
+  .m-name {
+    font-size: 0.78rem;
+    color: rgba(255,255,255,0.78);
+    text-shadow: 0 1px 6px rgba(0,0,0,0.8);
+  }
+
+  /* spotlight: hovering one tile pushes the others further into the dark */
+  .m-grid:hover .m-tile:not(:hover) img { filter: brightness(0.3) saturate(0.6); }
+
+  @media (prefers-reduced-motion: reduce) {
+    .m-tile img { transition: filter 0.2s ease; }
+    .m-tile:hover img { transform: none; }
+  }
+</style>
