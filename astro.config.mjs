@@ -17,6 +17,8 @@ export default defineConfig({
     server: { watch: { ignored: ['**/.wrangler/**', '**/dist/**'] } },
     // Excalidraw pulls CJS deps (es6-promise-pool) and code-splits internally; force Vite
     // to pre-bundle it so the CJS->ESM interop + lazy sub-chunks resolve in one clean pass.
-    optimizeDeps: { include: ['@excalidraw/excalidraw'] }
+    // tiptap-markdown pulls markdown-it (CJS); pre-bundle the editor stack so the
+    // CJS->ESM interop resolves cleanly, same reason as Excalidraw.
+    optimizeDeps: { include: ['@excalidraw/excalidraw', 'tiptap-markdown', 'markdown-it'] }
   }
 });

@@ -1,0 +1,50 @@
+---
+// Reusable floating panel with a blurred backdrop, built on native <dialog>.
+// Open from anywhere: document.getElementById(id).showModal()
+// Free from the platform: ESC to close, focus trap, centering, inert background.
+interface Props { id: string; title?: string; }
+const { id, title } = Astro.props;
+---
+<dialog id={id} class="overlay">
+  <div class="overlay-card">
+    {title && (
+      <div class="overlay-head">
+        <strong>{title}</strong>
+        <button type="button" class="overlay-x" aria-label="Close">✕</button>
+      </div>
+    )}
+    <slot />
+  </div>
+</dialog>
+
+<style>
+  /* center explicitly instead of relying on the UA :modal margin, which a base
+     reset (Tailwind preflight) can clobber */
+  .overlay {
+    position: fixed; inset: 0; margin: auto;
+    width: fit-content; height: fit-content; max-width: 92vw;
+    padding: 0; border: none; background: transparent; color: var(--text);
+  }
+  .overlay::backdrop { background: rgba(0, 0, 0, 0.3); backdrop-filter: blur(6px); }
+  .overlay-card {
+    background: var(--bg);
+    border: 1px solid var(--border);
+    border-radius: 14px;
+    padding: 22px 24px;
+    min-width: 300px;
+    box-shadow: 0 24px 70px rgba(0, 0, 0, 0.25);
+  }
+  .overlay-head { display: flex; align-items: center; justify-content: space-between; margin-bottom: 16px; }
+  .overlay-x { background: transparent; border: none; color: var(--text-soft); cursor: pointer; font-size: 15px; line-height: 1; }
+  .overlay[open] { animation: overlay-in 0.16s ease-out; }
+  @keyframes overlay-in { from { opacity: 0; } to { opacity: 1; } }
+</style>
+
+<script>
+  // close on backdrop click and on ✕ (ESC is handled natively). Astro dedupes
+  // this module, so it binds every .overlay on the page exactly once.
+  document.querySelectorAll<HTMLDialogElement>('dialog.overlay').forEach((d) => {
+    d.addEventListener('click', (e) => { if (e.target === d) d.close(); });
+    d.querySelector<HTMLButtonElement>('.overlay-x')?.addEventListener('click', () => d.close());
+  });
+</script>

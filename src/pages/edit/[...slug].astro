@@ -4,6 +4,7 @@ import Layout from '../../layouts/Layout.astro';
 import { STREAMS } from '../../streams';
 import { getDb, getPost } from '../../lib/db';
 import DiagramModal from '../../components/DiagramModal.tsx';
+import Overlay from '../../components/Overlay.astro';
 
 const slug = Astro.params.slug;
 const post = slug ? await getPost(getDb(), slug) : null;
@@ -23,99 +24,191 @@ const v = {
   body: post?.body ?? '',
 };
 const editing = !!post;
-const field = 'w-full px-3 py-2 rounded-lg text-sm bg-transparent';
-const fieldStyle = 'border: 1px solid var(--border); color: var(--text);';
+const setField = 'w-full px-3 py-2 rounded-lg text-sm bg-transparent';
+const setStyle = 'border: 1px solid var(--border); color: var(--text);';
 ---
 
 <Layout title={editing ? `Edit · ${v.title}` : 'New post · InfoGap'} description="Write a guide.">
-  <div class="max-w-6xl mx-auto px-6 py-10 fade-up">
-    <div class="mb-6 flex items-center justify-between">
+  <div class="max-w-3xl mx-auto px-6 py-8 fade-up">
+    <!-- doc app top bar -->
+    <div class="mb-8 flex items-center justify-between gap-4">
       <a href={editing ? `/guides/${v.slug}/` : '/'} class="text-sm hover:opacity-80" style="color: var(--text-soft);">← back</a>
-      <span id="status" class="text-sm" style="color: var(--text-soft);"></span>
+      <div class="flex items-center gap-3">
+        <span id="status" class="text-sm" style="color: var(--text-soft);"></span>
+        <button type="button" id="open-shortcuts" class="ghost-btn">⌘ Shortcuts</button>
+        <button type="submit" form="editor" class="px-4 py-1.5 rounded-lg text-sm font-semibold" style="background: var(--maroon); color: white;">
+          {editing ? 'Save' : 'Publish'}
+        </button>
+      </div>
     </div>
 
-    <form id="editor" class="grid lg:grid-cols-2 gap-8" data-editing={String(editing)}>
-      <!-- left: fields + markdown -->
-      <div class="flex flex-col gap-3">
-        <input name="title" placeholder="Title" value={v.title} class={`${field} text-lg font-semibold`} style={fieldStyle} />
-        <div class="flex gap-3">
-          <input name="slug" placeholder="url-slug" value={v.slug} readonly={editing}
-            class={`${field} font-mono ${editing ? 'opacity-60' : ''}`} style={fieldStyle} />
-          <select name="stream" class={field} style={fieldStyle}>
-            {STREAMS.map((s) => <option value={s.slug} selected={s.slug === v.stream}>{s.name}</option>)}
-          </select>
-        </div>
-        <div class="flex gap-3">
-          <input name="author" placeholder="Author" value={v.author} class={field} style={fieldStyle} />
-          <input name="role" placeholder="Role (e.g. Mechatronics '25)" value={v.role} class={field} style={fieldStyle} />
-        </div>
-        <div class="flex gap-3">
-          <input name="published" type="date" value={v.published} class={field} style={fieldStyle} />
-          <input name="readingTime" placeholder="6 min" value={v.readingTime} class={field} style={fieldStyle} />
-        </div>
-        <input name="tags" placeholder="tags, comma, separated" value={v.tags} class={field} style={fieldStyle} />
-        <input name="video" placeholder="YouTube URL (optional)" value={v.video} class={field} style={fieldStyle} />
-        <div class="flex justify-end">
-          <button type="button" id="insert-diagram" class="text-sm font-medium hover:opacity-70 transition-opacity" style="color: var(--maroon);">
-            ✎ Insert diagram
-          </button>
-        </div>
-        <textarea name="body" placeholder="# Write in markdown..." rows="22"
-          class={`${field} font-mono leading-relaxed resize-y`} style={fieldStyle}>{v.body}</textarea>
-
-        <div class="flex items-center gap-4 pt-1">
-          <button type="submit" class="px-5 py-2 rounded-lg text-sm font-semibold" style="background: var(--maroon); color: white;">
-            {editing ? 'Save' : 'Publish'}
-          </button>
+    <form id="editor" data-editing={String(editing)}>
+      <!-- post settings, tucked away -->
+      <details class="settings mb-6">
+        <summary>⚙︎ Post settings</summary>
+        <div class="flex flex-col gap-3 pt-3">
+          <div class="flex gap-3">
+            <input name="slug" placeholder="url-slug" value={v.slug} readonly={editing}
+              class={`${setField} font-mono ${editing ? 'opacity-60' : ''}`} style={setStyle} />
+            <select name="stream" class={setField} style={setStyle}>
+              {STREAMS.map((s) => <option value={s.slug} selected={s.slug === v.stream}>{s.name}</option>)}
+            </select>
+          </div>
+          <div class="flex gap-3">
+            <input name="readingTime" placeholder="6 min" value={v.readingTime} class={setField} style={setStyle} />
+            <input name="video" placeholder="YouTube URL (optional)" value={v.video} class={setField} style={setStyle} />
+          </div>
+          <input name="tags" placeholder="tags, comma, separated" value={v.tags} class={setField} style={setStyle} />
           {editing && (
-            <button type="button" id="delete" class="text-sm hover:opacity-70" style="color: var(--text-soft);">Delete</button>
+            <div class="pt-1">
+              <button type="button" id="delete" class="text-sm hover:opacity-70" style="color: var(--maroon);">Delete post</button>
+            </div>
           )}
         </div>
+      </details>
+
+      <!-- the document -->
+      <input name="title" placeholder="Untitled" value={v.title} class="doc-title" />
+
+      <div class="byline mt-4 mb-8 flex flex-wrap items-center gap-x-2 gap-y-1">
+        <input name="author" placeholder="Author" value={v.author} class="author" size="12" />
+        <span class="sep">·</span>
+        <input name="role" placeholder="role" value={v.role} size="18" />
+        <span class="sep">·</span>
+        <input name="published" type="date" value={v.published} />
+        <button type="button" id="insert-diagram" class="diagram-btn ml-auto" style="color: var(--maroon);">✎ Insert diagram</button>
       </div>
 
-      <!-- right: live preview -->
-      <div>
-        <p class="text-xs uppercase tracking-wider mb-3" style="color: var(--text-soft);">Preview</p>
-        <div id="preview" class="prose-guide"></div>
-      </div>
+      <!-- TipTap mounts here; rendered with .prose-guide so it looks like the published post -->
+      <div id="write-body" class="editor-doc prose-guide" data-md={v.body}></div>
     </form>
   </div>
+
+  <Overlay id="shortcuts" title="Keyboard shortcuts">
+    <ul id="sc-list" class="sc-list"></ul>
+  </Overlay>
 
   <!-- Excalidraw lives only on this editor page; client:only keeps React off public pages -->
   <DiagramModal client:only="react" />
 
+  <style>
+    .ghost-btn { padding: 5px 12px; font-size: 13px; background: transparent; color: var(--text-soft); border: 1px solid var(--border); border-radius: 8px; cursor: pointer; }
+    .ghost-btn:hover { color: var(--text); }
+
+    .doc-title {
+      font-family: var(--font-sans);
+      font-size: 2.5rem; font-weight: 700; letter-spacing: -0.02em; line-height: 1.1;
+      width: 100%; background: transparent; border: none; outline: none; color: var(--text);
+    }
+    .doc-title::placeholder { color: var(--text-soft); opacity: 0.35; }
+
+    .byline input { background: transparent; border: none; outline: none; color: var(--text-soft); font-size: 0.95rem; }
+    .byline input.author { color: var(--text); font-weight: 500; }
+    .byline input::placeholder { color: var(--text-soft); opacity: 0.5; }
+    .byline .sep { color: var(--text-soft); opacity: 0.5; }
+    .diagram-btn { font-size: 0.8rem; font-weight: 500; opacity: 0.85; transition: opacity 0.15s; }
+    .diagram-btn:hover { opacity: 1; }
+
+    .settings summary { font-size: 0.85rem; color: var(--text-soft); cursor: pointer; list-style: none; }
+    .settings summary::-webkit-details-marker { display: none; }
+
+    .sc-list { display: flex; flex-direction: column; gap: 11px; min-width: 280px; }
+  </style>
+
+  <!-- TipTap builds the document DOM at runtime, so its nodes never get Astro's
+       scope attribute — these rules (and the prose-guide ones in global.css) must
+       be global to reach them. Same goes for the JS-injected shortcut rows. -->
+  <style is:global>
+    .editor-doc .ProseMirror { outline: none; min-height: 60vh; }
+    .editor-doc .ProseMirror p.is-editor-empty:first-child::before {
+      content: attr(data-placeholder);
+      color: var(--text-soft); opacity: 0.5;
+      float: left; height: 0; pointer-events: none;
+    }
+    .editor-doc .ProseMirror-selectednode { outline: 2px solid var(--maroon); outline-offset: 2px; border-radius: 8px; }
+
+    .sc-list li { display: flex; align-items: center; justify-content: space-between; gap: 28px; font-size: 0.95rem; }
+    .sc-list kbd { font-family: var(--font-sans); font-size: 12px; background: var(--bg-soft); border: 1px solid var(--border); border-radius: 6px; padding: 2px 8px; color: var(--text-soft); white-space: nowrap; }
+  </style>
+
   <script>
-    import { render } from '../../lib/md';
+    import { Editor } from '@tiptap/core';
+    import StarterKit from '@tiptap/starter-kit';
+    import Image from '@tiptap/extension-image';
+    import Link from '@tiptap/extension-link';
+    import Placeholder from '@tiptap/extension-placeholder';
+    import { Markdown } from 'tiptap-markdown';
 
     const form = document.getElementById('editor') as HTMLFormElement;
-    const body = form.body as HTMLTextAreaElement;
     const titleEl = form.title as HTMLInputElement;
     const slugEl = form.slug as HTMLInputElement;
-    const preview = document.getElementById('preview')!;
+    const mount = document.getElementById('write-body') as HTMLElement;
     const status = document.getElementById('status')!;
     const editing = form.dataset.editing === 'true';
 
     const slugify = (s: string) =>
       s.toLowerCase().trim().replace(/[^a-z0-9]+/g, '-').replace(/^-+|-+$/g, '').slice(0, 80);
 
-    const draw = () => (preview.innerHTML = render(body.value));
-    body.addEventListener('input', draw);
-    draw();
+    // Cmd/Ctrl-K to add a link (extension-link has no default binding)
+    const LinkWithShortcut = Link.extend({
+      addKeyboardShortcuts() {
+        return {
+          'Mod-k': () => {
+            const url = window.prompt('Link URL');
+            if (url) this.editor.chain().focus().setLink({ href: url }).run();
+            return true;
+          },
+        };
+      },
+    });
 
-    // diagrams: open the Excalidraw island, then splice its image at the caret on insert
+    // WYSIWYG markdown editor: real rendered blocks (resized headings, inline
+    // diagram images, lists, quotes, code) that read/write markdown both ways.
+    const editor = new Editor({
+      element: mount,
+      extensions: [
+        StarterKit.configure({ heading: { levels: [1, 2, 3] } }),
+        Image,
+        LinkWithShortcut.configure({ openOnClick: false }),
+        Placeholder.configure({ placeholder: 'Start writing…' }),
+        Markdown.configure({ html: false, transformPastedText: true }),
+      ],
+      content: mount.dataset.md || '',
+    });
+    const getMarkdown = () => editor.storage.markdown.getMarkdown() as string;
+
+    // --- shortcuts help (display only; TipTap owns the actual keybinds) ---
+    const mac = /Mac|iPhone|iPad/.test(navigator.platform);
+    const mod = mac ? '⌘' : 'Ctrl', alt = mac ? '⌥' : 'Alt', shift = mac ? '⇧' : 'Shift';
+    const rows: [string, string][] = [
+      ['Bold', `${mod} B`],
+      ['Italic', `${mod} I`],
+      ['Inline code', `${mod} E`],
+      ['Link', `${mod} K`],
+      ['Heading', `${mod}${alt} 1–3`],
+      ['Bullet list', `${mod}${shift} 8`],
+      ['Quote', `${mod}${shift} B`],
+      ['Show shortcuts', `${mod} /`],
+      ['Insert diagram', '✎ button'],
+    ];
+    document.getElementById('sc-list')!.innerHTML = rows
+      .map(([l, k]) => `<li><span>${l}</span><kbd>${k}</kbd></li>`)
+      .join('');
+
+    const dialog = document.getElementById('shortcuts') as HTMLDialogElement;
+    document.getElementById('open-shortcuts')!.addEventListener('click', () => dialog.showModal());
+    document.addEventListener('keydown', (e) => {
+      if ((e.metaKey || e.ctrlKey) && e.key === '/') { e.preventDefault(); dialog.showModal(); }
+    });
+
+    // diagrams: open the Excalidraw island, then drop its SVG inline at the caret
     document
       .getElementById('insert-diagram')!
       .addEventListener('click', () => window.dispatchEvent(new CustomEvent('diagram:open')));
 
     window.addEventListener('diagram:insert', (e) => {
       const id = (e as CustomEvent).detail.id;
-      const md = `\n![diagram](/api/diagrams/${id}.svg)\n`;
-      const at = body.selectionStart ?? body.value.length;
-      body.value = body.value.slice(0, at) + md + body.value.slice(at);
-      body.dispatchEvent(new Event('input', { bubbles: true })); // redraw preview
-      body.focus();
-      const caret = at + md.length;
-      body.setSelectionRange(caret, caret);
+      editor.chain().focus().setImage({ src: `/api/diagrams/${id}.svg`, alt: 'diagram' }).run();
     });
 
     // auto-fill slug from title for new posts until the user edits it
@@ -140,7 +233,7 @@ const fieldStyle = 'border: 1px solid var(--border); color: var(--text);';
         readingTime: f.get('readingTime'),
         video: f.get('video'),
         tags: String(f.get('tags') || '').split(',').map((t) => t.trim()).filter(Boolean),
-        body: f.get('body'),
+        body: getMarkdown(),
       };
       status.textContent = 'Saving…';
       const res = await fetch('/api/posts', {
