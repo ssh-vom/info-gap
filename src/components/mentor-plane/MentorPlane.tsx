@@ -12,11 +12,6 @@ interface Props {
 
 const T = TUNING;
 
-function prefersReduced() {
-  return typeof window !== 'undefined' &&
-    window.matchMedia('(prefers-reduced-motion: reduce)').matches;
-}
-
 function isLowPower() {
   if (typeof navigator === 'undefined') return false;
   const cores = (navigator as any).hardwareConcurrency || 8;
@@ -33,33 +28,12 @@ function isLowPower() {
  *   - constants.ts     every tunable knob, with tasteful defaults
  *   - MentorPlane.tsx  pool recycling, rAF render loop, input handling, a11y
  *
- * The wrapper decides a reduced-motion fallback vs. the live experience so the
- * two never mix their hook counts.
+ * The wrapper renders the live experience directly.
  */
 export default function MentorPlane({ mentors, kicker, title }: Props) {
-  const [reduced] = useState(prefersReduced);
-  if (reduced) return <MentorPlaneFallback mentors={mentors} />;
   return <MentorPlaneLive mentors={mentors} kicker={kicker} title={title} />;
 }
 
-/** Non-parallax fallback: the original static mosaic. */
-function MentorPlaneFallback({ mentors }: Props) {
-  return (
-    <div className="mp-fallback">
-      <div className="m-grid">
-        {mentors.map((m) => (
-          <figure className="m-tile" key={m.name}>
-            <img src={m.img} alt={`${m.name} — ${m.cat}`} loading="lazy" width="600" height="600" />
-            <figcaption className="m-overlay">
-              <span className="m-cat">{m.cat}</span>
-              <span className="m-name">{m.name}</span>
-            </figcaption>
-          </figure>
-        ))}
-      </div>
-    </div>
-  );
-}
 function MentorPlaneLive({ mentors, kicker, title }: Props) {
   const [lowPower] = useState(isLowPower);
   const [recenterFlash, setRecenterFlash] = useState(false);
@@ -94,6 +68,7 @@ function MentorPlaneLive({ mentors, kicker, title }: Props) {
     // Scroll no longer moves the camera — the plane is a still canvas you
     // explore by drag / arrow keys. Scroll just passes through the page.
     let dragX = 0, dragY = 0;
+    let lastK = 1; // viewport scale factor — shrinks the field on small screens
 
     let raf = 0;
     let running = true;
@@ -136,6 +111,16 @@ function MentorPlaneLive({ mentors, kicker, title }: Props) {
       if (!running || !inView) { raf = 0; return; }
       glance.step(T.GLANCE_DAMP);
 
+      const { vw, vh } = dim();
+      // Viewport scale: shrink the field (cells, cards, perspective, depth) on
+      // small screens so mobile gets the same card density + parallax as
+      // desktop instead of one giant card filling the viewport.
+      const k = Math.max(0.4, Math.min(1, vw / 1000));
+      if (k !== lastK) { scene.style.setProperty('--mp-scale', String(k)); lastK = k; }
+      const CELL = T.CELL * k, CARD_W = T.CARD_W * k, CARD_H = T.CARD_H * k;
+      const DEPTH = T.DEPTH * k, HOVER_LIFT = T.HOVER_LIFT * k;
+      const GLANCE_T = T.GLANCE_TRANSLATE * k, DRAG_MAX = T.DRAG_MAX * k;
+
       // Drag / keys commit a persistent offset from the centered start — so
       // you can wander through the field. Scroll is not in the loop at all.
       if (keysDown.size) {
@@ -144,23 +129,22 @@ function MentorPlaneLive({ mentors, kicker, title }: Props) {
         if (keysDown.has('up')) dragY -= T.DRAG_STEP;
         if (keysDown.has('down')) dragY += T.DRAG_STEP;
       }
-      dragX = Math.max(-T.DRAG_MAX, Math.min(T.DRAG_MAX, dragX));
-      dragY = Math.max(-T.DRAG_MAX, Math.min(T.DRAG_MAX, dragY));
+      dragX = Math.max(-DRAG_MAX, Math.min(DRAG_MAX, dragX));
+      dragY = Math.max(-DRAG_MAX, Math.min(DRAG_MAX, dragY));
 
       // Camera sits at the start cell plus the committed drag/keys offset.
-      camera.setTarget(startX + dragX, startY + dragY);
+      camera.setTarget(CELL / 2 + dragX, CELL / 2 + dragY);
       camera.step(T.CAMERA_SPRING);
 
-      const { vw, vh } = dim();
       world.style.transform =
         `translate3d(${glance.x.toFixed(2)}px, ${glance.y.toFixed(2)}px, 0px)` +
         ` rotateX(${glance.rx.toFixed(3)}deg) rotateY(${glance.ry.toFixed(3)}deg)`;
 
-      const margin = T.CELL * T.MARGIN_CELLS;
-      const iMin = Math.floor((camera.x - vw / 2 - margin) / T.CELL);
-      const iMax = Math.ceil((camera.x + vw / 2 + margin) / T.CELL);
-      const jMin = Math.floor((camera.y - vh / 2 - margin) / T.CELL);
-      const jMax = Math.ceil((camera.y + vh / 2 + margin) / T.CELL);
+      const margin = CELL * T.MARGIN_CELLS;
+      const iMin = Math.floor((camera.x - vw / 2 - margin) / CELL);
+      const iMax = Math.ceil((camera.x + vw / 2 + margin) / CELL);
+      const jMin = Math.floor((camera.y - vh / 2 - margin) / CELL);
+      const jMax = Math.ceil((camera.y + vh / 2 + margin) / CELL);
 
       const visible: { i: number; j: number; key: string }[] = [];
       for (let j = jMin; j <= jMax; j++) {
@@ -185,14 +169,14 @@ function MentorPlaneLive({ mentors, kicker, title }: Props) {
       for (const v of visible) {
         const slot = slots.get(v.key);
         if (slot === undefined) continue;
-        const L = cellLayout(v.i, v.j, T.CELL, T.JITTER, T.SIZE_VAR, T.DEPTH_VAR);
+        const L = cellLayout(v.i, v.j, CELL, T.JITTER, T.SIZE_VAR, T.DEPTH_VAR);
         const sx = L.px - camera.x + vw / 2;
         const sy = L.py - camera.y + vh / 2;
         const dx = sx - vw / 2;
         const dy = sy - vh / 2;
         const nd = Math.min(1, Math.hypot(dx, dy) / half) * T.CENTER_EMPHASIS;
 
-        let z = -T.DEPTH * nd * nd * (0.7 + L.depth * 0.6);
+        let z = -DEPTH * nd * nd * (0.7 + L.depth * 0.6);
         let scale = (1 - T.SCALE_FALLOFF * nd) * L.size;
         let rotY = -T.CARD_ROT * nd * (dx / half);
         let rotX = T.CARD_ROT * nd * (dy / half);
@@ -201,7 +185,7 @@ function MentorPlaneLive({ mentors, kicker, title }: Props) {
 
         const isEmph = slot === hoverSlot || slot === focusSlot;
         if (isEmph) {
-          z -= T.HOVER_LIFT;
+          z -= HOVER_LIFT;
           scale *= T.HOVER_SCALE;
           op = 1;
           rotY *= 0.4;
@@ -211,8 +195,8 @@ function MentorPlaneLive({ mentors, kicker, title }: Props) {
         }
         if (!lowPower && nd > 0.88 && !isEmph) blur = (nd - 0.88) * 18;
 
-        const w = T.CARD_W * scale;
-        const h = T.CARD_H * scale;
+        const w = CARD_W * scale;
+        const h = CARD_H * scale;
         const el = pool[slot];
         el.style.transform =
           `translate3d(${(sx - w / 2).toFixed(2)}px, ${(sy - h / 2).toFixed(2)}px, ${z.toFixed(2)}px)` +
@@ -270,7 +254,7 @@ function MentorPlaneLive({ mentors, kicker, title }: Props) {
       glance.setTarget(
         (p.x - vw / 2) / (vw / 2),
         (p.y - vh / 2) / (vh / 2),
-        T.GLANCE_YAW, T.GLANCE_PITCH, T.GLANCE_TRANSLATE,
+        T.GLANCE_YAW, T.GLANCE_PITCH, T.GLANCE_TRANSLATE * lastK,
       );
 
       if (down) {

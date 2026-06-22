@@ -103,11 +103,11 @@ body {
     position: relative;
     /* one viewport tall: a still canvas you drag/arrow through, not a
        scroll-driven flythrough. Scroll passes through the page normally. */
-    height: 100vh;
+    height: 100svh;
   }
   .mp-sticky {
     position: relative;
-    height: 100vh;
+    height: 100svh;
     overflow: hidden;
     background:
       radial-gradient(120% 90% at 50% 40%, color-mix(in srgb, var(--bg-soft) 70%, transparent), transparent 70%),
@@ -136,7 +136,7 @@ body {
   .mp-scene {
     position: absolute;
     inset: 0;
-    perspective: 1500px;
+    perspective: calc(1500px * var(--mp-scale, 1));
     perspective-origin: 50% 50%;
     /* pan-y: the page scrolls vertically through the stage; horizontal touch
        does nothing so a stray swipe won't fight the experience. Mouse drag
@@ -156,8 +156,8 @@ body {
     position: absolute;
     top: 0;
     left: 0;
-    width: 270px;
-    height: 340px;
+    width: calc(270px * var(--mp-scale, 1));
+    height: calc(340px * var(--mp-scale, 1));
     transform-style: preserve-3d;
     will-change: transform, opacity;
     border-radius: 16px;
@@ -190,7 +190,7 @@ body {
     display: flex;
     flex-direction: column;
     justify-content: flex-end;
-    padding: 16px;
+    padding: calc(16px * var(--mp-scale, 1));
     gap: 2px;
     pointer-events: none;
     background: linear-gradient(180deg, rgba(0,0,0,0.05), rgba(0,0,0,0.62));
@@ -329,10 +329,6 @@ body {
   }
   .m-grid:hover .m-tile:not(:hover) img { filter: brightness(0.3) saturate(0.6); }
 
-  @media (prefers-reduced-motion: reduce) {
-    .m-tile img { transition: filter 0.2s ease; }
-    .m-tile:hover img { transform: none; }
-  }
   @media (max-width: 640px) {
     .mp-instructions { display: none; }
   }
