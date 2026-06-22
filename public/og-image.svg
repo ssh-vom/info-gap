@@ -1,0 +1,11 @@
+<svg xmlns="http://www.w3.org/2000/svg" width="1200" height="630" viewBox="0 0 1200 630">
+  <rect width="1200" height="630" fill="#0c0c0d"/>
+  <!-- logo, scaled up from 64x64 viewBox, centered above wordmark -->
+  <g transform="translate(536 150) scale(1.9)">
+    <path fill="#e85a8f" d="M37 14 H52 L43 31 H28 Z"/>
+    <path fill="#e85a8f" d="M27 50 H12 L21 33 H36 Z"/>
+    <path fill="#FDBF57" d="M24 31 L40 21 L43 27 L27 37 Z"/>
+  </g>
+  <text x="600" y="430" text-anchor="middle" font-family="Inter, Helvetica, Arial, sans-serif" font-size="96" font-weight="700" fill="#ededed">InfoGap</text>
+  <text x="600" y="500" text-anchor="middle" font-family="Inter, Helvetica, Arial, sans-serif" font-size="34" font-weight="400" fill="#a1a1aa">The knowledge they didn&apos;t hand you.</text>
+</svg>
