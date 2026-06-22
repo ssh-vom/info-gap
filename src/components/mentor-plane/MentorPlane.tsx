@@ -2,12 +2,7 @@ import { useEffect, useRef, useState } from 'react';
 import { TUNING, POOL_SIZE } from './constants';
 import { Camera, Glance } from './camera';
 import { cellLayout, mentorIndex, keyOf } from './layout';
-
-interface Mentor {
-  cat: string;
-  name: string;
-  img: string;
-}
+import type { Mentor } from '../../lib/mentors';
 
 interface Props {
   mentors: Mentor[];
@@ -70,7 +65,6 @@ function MentorPlaneLive({ mentors, kicker, title }: Props) {
   const [recenterFlash, setRecenterFlash] = useState(false);
 
   const sceneRef = useRef<HTMLDivElement>(null);
-  const stageRef = useRef<HTMLDivElement>(null);
   const worldRef = useRef<HTMLDivElement>(null);
   const poolRef = useRef<HTMLDivElement[]>([]);
   const imgRef = useRef<HTMLImageElement[]>([]);
@@ -79,7 +73,6 @@ function MentorPlaneLive({ mentors, kicker, title }: Props) {
   const recenterRef = useRef<() => void>(() => {});
 
   useEffect(() => {
-    const stage = stageRef.current!;
     const scene = sceneRef.current!;
     const world = worldRef.current!;
     const pool = poolRef.current;
@@ -98,8 +91,8 @@ function MentorPlaneLive({ mentors, kicker, title }: Props) {
     let hoverSlot = -1;
     let focusSlot = -1;
 
-    // Scroll drives the camera; drag is a peek offset on top that eases back.
-    let progress = 0;       // 0..1 through the stage
+    // Scroll no longer moves the camera — the plane is a still canvas you
+    // explore by drag / arrow keys. Scroll just passes through the page.
     let dragX = 0, dragY = 0;
 
     let raf = 0;
@@ -108,16 +101,6 @@ function MentorPlaneLive({ mentors, kicker, title }: Props) {
     const keysDown = new Set<string>();
 
     const dim = () => ({ vw: scene.clientWidth, vh: scene.clientHeight });
-
-    // Scroll progress through the tall stage: 0 when the stage top hits the
-    // viewport top, 1 when the stage bottom hits the viewport bottom. While the
-    // sticky inner viewport is pinned, this is the only value that changes —
-    // and it's what flies the camera through the plane.
-    const readProgress = () => {
-      const r = stage.getBoundingClientRect();
-      const span = stage.offsetHeight - window.innerHeight;
-      progress = span > 0 ? Math.max(0, Math.min(1, -r.top / span)) : 0;
-    };
 
     // Assign / release pool slots for the current visible cell set. Content is
     // set once, when a cell first enters (off-screen thanks to the margin), so
@@ -147,12 +130,14 @@ function MentorPlaneLive({ mentors, kicker, title }: Props) {
     };
 
     const renderFrame = () => {
-      if (!running || !inView) return;
+      // ponytail: clear raf on early return so the IO/visibility restart
+      // guards (!raf) can wake the loop. Without this a stale id deadlocks
+      // it after fullscreen/focus flips IO off — unfreezing on refocus.
+      if (!running || !inView) { raf = 0; return; }
       glance.step(T.GLANCE_DAMP);
 
-      // Drag / keys commit a persistent offset on top of the scroll path — so
-      // you can actually wander through the field, not just peek. Scroll still
-      // carries you in and out (it's never hijacked); this layers on top.
+      // Drag / keys commit a persistent offset from the centered start — so
+      // you can wander through the field. Scroll is not in the loop at all.
       if (keysDown.size) {
         if (keysDown.has('left')) dragX -= T.DRAG_STEP;
         if (keysDown.has('right')) dragX += T.DRAG_STEP;
@@ -162,13 +147,9 @@ function MentorPlaneLive({ mentors, kicker, title }: Props) {
       dragX = Math.max(-T.DRAG_MAX, Math.min(T.DRAG_MAX, dragX));
       dragY = Math.max(-T.DRAG_MAX, Math.min(T.DRAG_MAX, dragY));
 
-      // Camera follows a gentle path through the plane driven by scroll
-      // progress, plus the committed drag/keys offset.
-      const pathX = startX + progress * T.SCROLL_TRAVEL_X;
-      const pathY = startY + progress * T.SCROLL_TRAVEL_Y
-        + Math.sin(progress * Math.PI) * T.SCROLL_SWAY;
-      camera.setTarget(pathX + dragX, pathY + dragY);
-      camera.step(T.CAMERA_FRICTION, T.MAX_VELOCITY, T.SCROLL_DAMP);
+      // Camera sits at the start cell plus the committed drag/keys offset.
+      camera.setTarget(startX + dragX, startY + dragY);
+      camera.step(T.CAMERA_SPRING);
 
       const { vw, vh } = dim();
       world.style.transform =
@@ -188,6 +169,15 @@ function MentorPlaneLive({ mentors, kicker, title }: Props) {
         }
       }
       syncSlots(visible);
+
+      // Frame-accurate hover: cards move every frame, so re-hit-test against
+      // the last pointer position. Dragging suppresses hover.
+      if (ptr.present && !dragging) {
+        const hit = (document.elementFromPoint(ptr.cx, ptr.cy) as HTMLElement | null)?.closest('.mp-card') as HTMLElement | null;
+        hoverSlot = hit ? pool.indexOf(hit) : -1;
+      } else if (!ptr.present) {
+        hoverSlot = -1;
+      }
 
       const half = Math.max(vw, vh) / 2;
       const anyEmphasis = hoverSlot !== -1 || focusSlot !== -1;
@@ -248,10 +238,15 @@ function MentorPlaneLive({ mentors, kicker, title }: Props) {
     raf = requestAnimationFrame(renderFrame);
 
     // ---- Input: pointer peek + glance + click-vs-drag --------------------
-    // Scroll is NOT captured — the page scrolls naturally through the stage.
+    // Scroll is NOT captured — the page scrolls past the section naturally.
     // Touch drags scroll the page; only mouse/pen drags peek around the plane.
     let down: { x: number; y: number; lx: number; ly: number; moved: number } | null = null;
     let dragging = false;
+    // ponytail: track pointer in viewport coords + re-hit-test each frame
+    // via elementFromPoint. Cards slide under a still cursor every frame, so
+    // pointerover/out (boundary events) go stale; per-frame hit-testing is
+    // frame-accurate and immune to child-element flicker.
+    let ptr = { cx: 0, cy: 0, present: false };
 
     const localPos = (e: PointerEvent) => {
       const r = scene.getBoundingClientRect();
@@ -269,6 +264,7 @@ function MentorPlaneLive({ mentors, kicker, title }: Props) {
     const onMove = (e: PointerEvent) => {
       const p = localPos(e);
       const { vw, vh } = dim();
+      ptr.cx = e.clientX; ptr.cy = e.clientY; ptr.present = true;
       // Glance (parallax) follows any pointer; on touch it tracks the finger
       // subtly while the page scrolls, which reads as life, not a trap.
       glance.setTarget(
@@ -308,20 +304,14 @@ function MentorPlaneLive({ mentors, kicker, title }: Props) {
       scene.classList.remove('mp-dragging');
     };
 
-    const onLeave = () => glance.release();
-
-    const onOver = (e: PointerEvent) => {
-      if (dragging || e.pointerType === 'touch') return;
-      const target = (e.target as HTMLElement)?.closest('.mp-card') as HTMLElement | null;
-      if (target) hoverSlot = pool.indexOf(target);
-    };
-    const onOut = (e: PointerEvent) => {
-      const target = (e.target as HTMLElement)?.closest('.mp-card') as HTMLElement | null;
-      if (target && pool.indexOf(target) === hoverSlot) hoverSlot = -1;
+    const onLeave = () => {
+      glance.release();
+      ptr.present = false;
+      hoverSlot = -1;
     };
 
-    // No wheel handler: the page scrolls through the stage naturally.
-    const onScroll = () => readProgress();
+    // No wheel/scroll handler: scroll just passes through the section —
+    // the plane is a still canvas, not a scroll-driven flythrough.
 
     const onFocusIn = (e: FocusEvent) => {
       const t = e.target as HTMLElement;
@@ -338,7 +328,6 @@ function MentorPlaneLive({ mentors, kicker, title }: Props) {
         case 'ArrowRight': case 'd': case 'D': keysDown.add('right'); e.preventDefault(); break;
         case 'ArrowUp': case 'w': case 'W': keysDown.add('up'); e.preventDefault(); break;
         case 'ArrowDown': case 's': case 'S': keysDown.add('down'); e.preventDefault(); break;
-        case 'r': case 'R': case 'Home': recenter(); e.preventDefault(); break;
       }
     };
     const onKeyUp = (e: KeyboardEvent) => {
@@ -351,9 +340,7 @@ function MentorPlaneLive({ mentors, kicker, title }: Props) {
     };
 
     function recenter() {
-      // Scroll the page back to the start of the stage — the camera follows.
-      const top = stage.getBoundingClientRect().top + window.scrollY;
-      window.scrollTo({ top, behavior: 'smooth' });
+      // Just reset the wander offset — no scroll to undo anymore.
       dragX = 0;
       dragY = 0;
       setRecenterFlash(true);
@@ -376,14 +363,10 @@ function MentorPlaneLive({ mentors, kicker, title }: Props) {
     scene.addEventListener('pointerup', onUp);
     scene.addEventListener('pointercancel', onUp);
     scene.addEventListener('pointerleave', onLeave);
-    scene.addEventListener('pointerover', onOver);
-    scene.addEventListener('pointerout', onOut);
     scene.addEventListener('keydown', onKeyDown);
     scene.addEventListener('keyup', onKeyUp);
     scene.addEventListener('focusin', onFocusIn);
     scene.addEventListener('focusout', onFocusOut);
-    window.addEventListener('scroll', onScroll, { passive: true });
-    readProgress();
 
     const onVisibility = () => {
       if (document.hidden) {
@@ -396,7 +379,7 @@ function MentorPlaneLive({ mentors, kicker, title }: Props) {
       }
     };
     document.addEventListener('visibilitychange', onVisibility);
-    const onResize = () => { readProgress(); glance.release(); };
+    const onResize = () => { glance.release(); };
     window.addEventListener('resize', onResize);
 
     return () => {
@@ -407,13 +390,10 @@ function MentorPlaneLive({ mentors, kicker, title }: Props) {
       scene.removeEventListener('pointerup', onUp);
       scene.removeEventListener('pointercancel', onUp);
       scene.removeEventListener('pointerleave', onLeave);
-      scene.removeEventListener('pointerover', onOver);
-      scene.removeEventListener('pointerout', onOut);
       scene.removeEventListener('keydown', onKeyDown);
       scene.removeEventListener('keyup', onKeyUp);
       scene.removeEventListener('focusin', onFocusIn);
       scene.removeEventListener('focusout', onFocusOut);
-      window.removeEventListener('scroll', onScroll);
       document.removeEventListener('visibilitychange', onVisibility);
       window.removeEventListener('resize', onResize);
       io.disconnect();
@@ -423,7 +403,7 @@ function MentorPlaneLive({ mentors, kicker, title }: Props) {
   const doRecenter = () => recenterRef.current();
 
   return (
-    <div className="mp-stage" ref={stageRef}>
+    <div className="mp-stage">
       <div className="mp-sticky">
         {(kicker || title) && (
           <div className="mp-stage-head">
@@ -451,8 +431,8 @@ function MentorPlaneLive({ mentors, kicker, title }: Props) {
                   src=""
                   alt=""
                   loading="lazy"
-                  width="200"
-                  height="250"
+                  width="270"
+                  height="340"
                 />
                 <div className="mp-cap">
                   <span className="mp-cat" ref={(el) => { if (el) capRef.current[k] = el; }} />
@@ -475,7 +455,7 @@ function MentorPlaneLive({ mentors, kicker, title }: Props) {
           </button>
           <div className={`mp-hint${recenterFlash ? ' mp-hint-on' : ''}`}>Recentered</div>
           <div className="mp-instructions">
-            Scroll to travel · drag to explore · <kbd>R</kbd> to recenter
+            Drag to explore
           </div>
         </div>
       </div>

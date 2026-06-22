@@ -6,11 +6,13 @@ import KnowledgeMap from '../components/KnowledgeMap.astro';
 import MentorPlane from '../components/mentor-plane/MentorPlane.tsx';
 import { getDb, listPosts } from '../lib/db';
 import { MENTORS } from '../lib/mentors';
+import { getUser } from '../lib/auth';
 
+const user = await getUser(Astro.cookies);
 const guides = await listPosts(getDb());
 ---
 
-<Layout>
+<Layout chrome={!!user}>
   <!-- gate the intro: play once per session on a real page load, not on client-side nav back home.
        Runs before the veil is parsed, so the disabled case never flashes. -->
   <script is:inline>
@@ -32,55 +34,122 @@ const guides = await listPosts(getDb());
   </div>
 
   <div class="intro-zoom">
-  <section class="hero-screen fade-up">
-    <div class="max-w-6xl mx-auto px-6 w-full grid lg:grid-cols-[0.9fr_1.1fr] gap-12 items-center">
-      <div>
-        <p class="text-xs uppercase tracking-wider mb-5" style="color: var(--text-soft);">McMaster · curated</p>
-        <h1 class="text-5xl sm:text-6xl font-bold tracking-tight leading-[1.02]">
-          The knowledge they didn't hand you.
-        </h1>
-        <p class="mt-6 text-lg max-w-xl" style="color: var(--text-soft);">
-          Practical paths from McMaster students and alumni who already figured it out.
-        </p>
-        <div class="mt-8 flex items-center gap-8 text-sm font-medium">
-          <a href="#guides" class="underline underline-offset-4" style="color: var(--maroon);">
-            Explore guides →
+    {user ? (
+      <>
+        <section class="hero-screen fade-up">
+          <div class="max-w-6xl mx-auto px-6 w-full grid lg:grid-cols-[0.9fr_1.1fr] gap-12 items-center">
+            <div>
+              <p class="text-xs uppercase tracking-wider mb-5" style="color: var(--text-soft);">McMaster · curated</p>
+              <h1 class="text-5xl sm:text-6xl font-bold tracking-tight leading-[1.02]">
+                The knowledge they didn't hand you.
+              </h1>
+              <p class="mt-6 text-lg max-w-xl" style="color: var(--text-soft);">
+                Practical paths from McMaster students and alumni who already figured it out.
+              </p>
+              <div class="mt-8 flex items-center gap-8 text-sm font-medium">
+                <a href="#guides" class="underline underline-offset-4" style="color: var(--maroon);">
+                  Explore guides →
+                </a>
+                <a href="#mentors" class="hover:opacity-70 transition-opacity" style="color: var(--text-soft);">
+                  Meet mentors
+                </a>
+              </div>
+            </div>
+
+            <KnowledgeMap />
+          </div>
+          <a href="#mentors" class="hero-scroll-cue" aria-label="Scroll to meet mentors">
+            <span>Scroll</span>
+            <svg viewBox="0 0 24 24" width="18" height="18" aria-hidden="true"><path d="M12 5v14M6 13l6 6 6-6" fill="none" stroke="currentColor" stroke-width="1.6" stroke-linecap="round" stroke-linejoin="round"/></svg>
           </a>
-          <a href="#mentors" class="hover:opacity-70 transition-opacity" style="color: var(--text-soft);">
-            Meet mentors
+        </section>
+
+        <!-- the site breathes: scroll past the hero and you fall into a living field of mentors -->
+        <section id="mentors" class="fade-up">
+          <MentorPlane mentors={MENTORS} kicker="The network" title="A field of mentors, not a directory." client:only="react" />
+        </section>
+      </>
+    ) : (
+      <Fragment>
+        {/* unauth: chrome-less scroll narrative. (1) hero opens zoomed in on the
+            thesis + knowledge map, eases out as you scroll past; (2) the mentor
+            plane is a still canvas; (3) the join card emerges from its center.
+            All scroll choreography is native CSS view-timeline — no JS, no rAF. */}
+        <a href="/auth/linkedin" class="mp-login-pill">Login →</a>
+
+        <div class="mp-narrative">
+        <section class="mp-hero fade-up">
+          <div class="mp-hero-inner">
+            <div class="mp-hero-fade">
+            <div class="max-w-6xl mx-auto px-6 w-full grid lg:grid-cols-[0.9fr_1.1fr] gap-12 items-center">
+              <div>
+                <p class="text-xs uppercase tracking-wider mb-5" style="color: var(--text-soft);">McMaster · curated</p>
+                <h1 class="text-5xl sm:text-6xl font-bold tracking-tight leading-[1.02]">
+                  The knowledge they didn't hand you.
+                </h1>
+                <p class="mt-6 text-lg max-w-xl" style="color: var(--text-soft);">
+                  Practical paths from McMaster students and alumni who already figured it out.
+                </p>
+              </div>
+              <KnowledgeMap />
+            </div>
+          </div>
+          </div>
+          <a href="#join" class="hero-scroll-cue" aria-label="Scroll to meet the network">
+            <span>Scroll</span>
+            <svg viewBox="0 0 24 24" width="18" height="18" aria-hidden="true"><path d="M12 5v14M6 13l6 6 6-6" fill="none" stroke="currentColor" stroke-width="1.6" stroke-linecap="round" stroke-linejoin="round"/></svg>
+          </a>
+        </section>
+
+        <section id="join" class="mp-immersive fade-up">
+          <div class="mp-plane-reveal">
+          <MentorPlane
+            mentors={MENTORS}
+            kicker="The network"
+            title="A field of mentors, not a directory."
+            client:only="react"
+          />
+          </div>
+
+          {/* centered CTA: a placeholder person with a ? on their head. Styled
+              exactly like a mentor card (dark fill, silhouette as the photo, caption
+              overlay) so it reads as one of the field that steps forward on scroll. */}
+          <a href="/auth/linkedin" class="mp-join-card" aria-label="Join the community">
+            <svg class="mp-join-art" viewBox="0 0 270 340" preserveAspectRatio="xMidYMid slice" aria-hidden="true">
+              <rect width="270" height="340" fill="#0a0a0b"/>
+              <text x="135" y="96" text-anchor="middle" font-family="var(--font-sans)" font-size="62" font-weight="700" fill="var(--gold)" opacity="0.92">?</text>
+              <circle cx="135" cy="168" r="44" fill="var(--text-soft)" opacity="0.8"/>
+              <path d="M66 340 C66 252 98 216 135 216 C172 216 204 252 204 340 Z" fill="var(--text-soft)" opacity="0.5"/>
+            </svg>
+            <div class="mp-join-cap">
+              <span class="mp-join-eyebrow">Be the first</span>
+              <span class="mp-join-title">Join the community</span>
+              <span class="mp-join-sub">Add your face to the field.</span>
+            </div>
+          </a>
+        </section>
+        </div>
+      </Fragment>
+    )}
+
+    {user && (
+      <section id="guides" class="max-w-3xl mx-auto px-6 pb-24">
+        <div class="flex justify-end mb-4">
+          <a href="/edit" class="text-sm font-medium hover:opacity-70 transition-opacity" style="color: var(--maroon);">
+            ✎ New post
           </a>
         </div>
-      </div>
+        <div class="grid gap-px" style="background: var(--border);">
+          {guides.map((post) => <GuideCard post={post} />)}
+        </div>
 
-      <KnowledgeMap />
-    </div>
-    <a href="#mentors" class="hero-scroll-cue" aria-label="Scroll to meet mentors">
-      <span>Scroll</span>
-      <svg viewBox="0 0 24 24" width="18" height="18" aria-hidden="true"><path d="M12 5v14M6 13l6 6 6-6" fill="none" stroke="currentColor" stroke-width="1.6" stroke-linecap="round" stroke-linejoin="round"/></svg>
-    </a>
-  </section>
-
-  <!-- the site breathes: scroll past the hero and you fall into a living field of mentors -->
-  <section id="mentors" class="fade-up">
-    <MentorPlane mentors={MENTORS} kicker="The network" title="A field of mentors, not a directory." client:only="react" />
-  </section>
-
-  <section id="guides" class="max-w-3xl mx-auto px-6 pb-24">
-    <div class="flex justify-end mb-4">
-      <a href="/edit" class="text-sm font-medium hover:opacity-70 transition-opacity" style="color: var(--maroon);">
-        ✎ New post
-      </a>
-    </div>
-    <div class="grid gap-px" style="background: var(--border);">
-      {guides.map((post) => <GuideCard post={post} />)}
-    </div>
-
-    {guides.length === 0 && (
-      <p class="text-center py-20" style="color: var(--text-soft);">
-        No guides yet. <a href="/edit" class="underline" style="color: var(--maroon);">Write the first one →</a>
-      </p>
+        {guides.length === 0 && (
+          <p class="text-center py-20" style="color: var(--text-soft);">
+            No guides yet. <a href="/edit" class="underline" style="color: var(--maroon);">Write the first one →</a>
+          </p>
+        )}
+      </section>
     )}
-  </section>
   </div>
 
   <style is:global>
@@ -152,6 +221,171 @@ const guides = await listPosts(getDb());
     .hero-scroll-cue:hover { opacity: 1; color: var(--maroon); }
     @keyframes hero-cue { 0%, 100% { transform: translateY(0); opacity: 0.7; } 50% { transform: translateY(4px); opacity: 1; } }
     @media (prefers-reduced-motion: reduce) { .hero-scroll-cue svg { animation: none; } }
+
+    /* ---- unauth scroll narrative: native view-timeline, no JS ---- */
+    /* login pill stays available across both sections */
+    .mp-login-pill {
+      position: fixed;
+      top: 18px; right: 22px;
+      z-index: 70;
+      padding: 8px 16px;
+      border-radius: 999px;
+      font-size: 0.85rem;
+      font-weight: 600;
+      color: var(--maroon);
+      background: color-mix(in srgb, var(--bg) 70%, transparent);
+      border: 1px solid var(--border);
+      backdrop-filter: blur(8px);
+      -webkit-backdrop-filter: blur(8px);
+      text-decoration: none;
+      transition: opacity 0.2s ease, transform 0.2s ease;
+    }
+    .mp-login-pill:hover { opacity: 0.85; transform: translateY(-1px); }
+
+    /* The narrative wraps hero + plane. The plane's view-timeline (--plane) is
+       hoisted here via timeline-scope so the hero's animations can share it —
+       one progress value drives the whole transition, perfectly synchronized. */
+    .mp-narrative { timeline-scope: --plane; }
+
+    /* (1) hero: pinned sticky so the plane scrolls UP OVER it. Both sections
+       then share screen space during the handoff → a true overlap dissolve
+       instead of a moving seam. Same radial backdrop as the plane so the
+       dissolve has no color shift. */
+    .mp-hero {
+      position: sticky;
+      top: 0;
+      z-index: 1;
+      min-height: 100svh;
+      display: flex; align-items: center; justify-content: center;
+      overflow: hidden;
+      background:
+        radial-gradient(120% 90% at 50% 40%, color-mix(in srgb, var(--bg-soft) 70%, transparent), transparent 70%),
+        var(--bg);
+    }
+    .mp-hero-inner {
+      width: 100%;
+      /* zoom tied to the plane's entry: scale 1.25 at scroll top (plane
+         off-screen) → 0.92 as the plane fully covers the hero. */
+      animation: mp-hero-zoom ease-out both;
+      animation-timeline: --plane;
+      animation-range: entry 0% entry 100%;
+    }
+    @keyframes mp-hero-zoom {
+      from { transform: scale(1.25); }
+      to   { transform: scale(0.92); }
+    }
+    /* hero content fades out as the plane covers it — gone by 70% of the
+       plane's entry, so the hero is empty well before it's fully covered. */
+    .mp-hero-fade {
+      animation: mp-hero-fade linear both;
+      animation-timeline: --plane;
+      animation-range: entry 0% entry 70%;
+    }
+    @keyframes mp-hero-fade {
+      from { opacity: 1; }
+      to   { opacity: 0; }
+    }
+
+    /* (2) mentor plane scrolls up over the pinned hero. z-index 2 covers it.
+       Same radial backdrop. */
+    .mp-immersive {
+      position: relative;
+      z-index: 2;
+      height: 100vh;
+      overflow: hidden;
+      view-timeline-name: --plane;
+      view-timeline-axis: block;
+      background:
+        radial-gradient(120% 90% at 50% 40%, color-mix(in srgb, var(--bg-soft) 70%, transparent), transparent 70%),
+        var(--bg);
+    }
+    /* plane reveals through the pinned hero: opaque by 60% of entry, so it's
+       solid before the hero content is fully gone — the two overlap on screen. */
+    .mp-plane-reveal {
+      animation: mp-plane-reveal linear both;
+      animation-timeline: --plane;
+      animation-range: entry 10% entry 60%;
+    }
+    @keyframes mp-plane-reveal {
+      from { opacity: 0; }
+      to   { opacity: 1; }
+    }
+
+    .mp-join-card {
+      position: absolute;
+      left: 50%; top: 50%;
+      transform: translate(-50%, -50%);
+      z-index: 45;
+      width: 270px;
+      height: 340px;
+      border-radius: 16px;
+      /* same dark fill + shadow as .mp-card so it reads as one of the field */
+      background: #000;
+      box-shadow: 0 10px 30px rgba(0,0,0,0.35);
+      overflow: hidden;
+      text-decoration: none;
+      cursor: pointer;
+      transition: box-shadow 0.3s ease, transform 0.3s ease;
+      /* emerges from the field's center as the plane scrolls into view: starts
+         dimmed and slightly back, steps forward + sharpens. Reads as a card
+         stepping out of the field, not a panel popping in. */
+      animation: mp-join-emerge linear both;
+      animation-timeline: --plane;
+      animation-range: entry 45% entry 100%;
+    }
+    .mp-join-card:hover {
+      box-shadow: 0 22px 60px rgba(0,0,0,0.55), 0 0 0 1px color-mix(in srgb, var(--gold) 40%, transparent);
+    }
+    .mp-join-art {
+      position: absolute;
+      inset: 0;
+      width: 100%;
+      height: 100%;
+      display: block;
+      /* mirror the mentor cards' default dim/desaturate so it sits in the field */
+      filter: brightness(0.55) saturate(0.85);
+      transition: filter 0.3s ease;
+    }
+    .mp-join-card:hover .mp-join-art { filter: brightness(1.05) saturate(1.1); }
+    /* caption overlay sits at the bottom like the mentor cards' cat/name */
+    .mp-join-cap {
+      position: absolute;
+      left: 0; right: 0; bottom: 0;
+      padding: 16px 18px 18px;
+      display: flex;
+      flex-direction: column;
+      gap: 2px;
+      text-align: left;
+      background: linear-gradient(to top, rgba(0,0,0,0.78), rgba(0,0,0,0));
+    }
+    .mp-join-eyebrow {
+      font-size: 0.62rem;
+      text-transform: uppercase;
+      letter-spacing: 0.14em;
+      color: var(--gold);
+      font-weight: 600;
+    }
+    .mp-join-title {
+      font-family: var(--font-sans);
+      font-size: 1.05rem;
+      font-weight: 700;
+      letter-spacing: -0.01em;
+      color: var(--text);
+    }
+    .mp-join-sub {
+      font-size: 0.78rem;
+      color: var(--text-soft);
+    }
+    @keyframes mp-join-emerge {
+      from { opacity: 0; transform: translate(-50%, -50%) scale(0.92); filter: brightness(0.4); }
+      to   { opacity: 1; transform: translate(-50%, -50%) scale(1);    filter: brightness(1); }
+    }
+    @media (prefers-reduced-motion: reduce) {
+      .mp-hero-inner { animation: none; transform: none; }
+      .mp-hero-fade { animation: none; }
+      .mp-plane-reveal { animation: none; }
+      .mp-join-card { animation: none; }
+    }
 
     @keyframes intro-logo-l { from { opacity: 0; transform: translate(-9px, 9px); } to { opacity: 1; transform: none; } }
     @keyframes intro-logo-r { from { opacity: 0; transform: translate(9px, -9px); } to { opacity: 1; transform: none; } }

@@ -1,14 +1,15 @@
 // Camera + glance state machines. Plain mutable objects kept out of React
 // state so the rAF loop can mutate them without re-renders.
 
+// ponytail: Camera just lerps to a target set every frame (scroll path + drag
+// offset). No inertia/velocity path — setTarget() runs each tick so the
+// hasTarget branch was always taken. Add vx/vy + nudge() back if you wire
+// wheel/drag-fling with momentum.
 export class Camera {
   x: number;
   y: number;
-  vx = 0;
-  vy = 0;
   private tx: number;
   private ty: number;
-  private hasTarget = false;
 
   constructor(x: number, y: number) {
     this.x = x;
@@ -17,48 +18,14 @@ export class Camera {
     this.ty = y;
   }
 
-  // Programmatic move (keyboard / recenter): ease toward a target.
   setTarget(x: number, y: number) {
     this.tx = x;
     this.ty = y;
-    this.hasTarget = true;
-    this.vx = 0;
-    this.vy = 0;
   }
 
-  // Direct drag / wheel: move immediately and seed inertia from the delta.
-  nudge(dx: number, dy: number) {
-    this.x += dx;
-    this.y += dy;
-    this.vx = dx;
-    this.vy = dy;
-    this.hasTarget = false;
-  }
-
-  step(friction: number, maxVel: number, spring: number) {
-    if (this.hasTarget) {
-      this.x += (this.tx - this.x) * spring;
-      this.y += (this.ty - this.y) * spring;
-      if (Math.abs(this.tx - this.x) < 0.4 && Math.abs(this.ty - this.y) < 0.4) {
-        this.x = this.tx;
-        this.y = this.ty;
-        this.hasTarget = false;
-        this.vx = 0;
-        this.vy = 0;
-      }
-      return;
-    }
-    this.x += this.vx;
-    this.y += this.vy;
-    this.vx *= friction;
-    this.vy *= friction;
-    const sp = Math.hypot(this.vx, this.vy);
-    if (sp > maxVel) {
-      this.vx = (this.vx / sp) * maxVel;
-      this.vy = (this.vy / sp) * maxVel;
-    }
-    if (Math.abs(this.vx) < 0.01) this.vx = 0;
-    if (Math.abs(this.vy) < 0.01) this.vy = 0;
+  step(spring: number) {
+    this.x += (this.tx - this.x) * spring;
+    this.y += (this.ty - this.y) * spring;
   }
 }
 

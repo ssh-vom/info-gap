@@ -101,20 +101,17 @@ body {
   /* ---- immersive mentor plane ---- */
   .mp-stage {
     position: relative;
-    /* slightly taller than the viewport: a short pin gives scroll-driven
-       travel through the plane without trapping the wheel. */
-    height: 160vh;
+    /* one viewport tall: a still canvas you drag/arrow through, not a
+       scroll-driven flythrough. Scroll passes through the page normally. */
+    height: 100vh;
   }
   .mp-sticky {
-    position: sticky;
-    top: 0;
+    position: relative;
     height: 100vh;
     overflow: hidden;
     background:
       radial-gradient(120% 90% at 50% 40%, color-mix(in srgb, var(--bg-soft) 70%, transparent), transparent 70%),
       var(--bg);
-    border-top: 1px solid var(--border);
-    border-bottom: 1px solid var(--border);
   }
   .mp-stage-head {
     position: absolute;
@@ -159,8 +156,8 @@ body {
     position: absolute;
     top: 0;
     left: 0;
-    width: 200px;
-    height: 250px;
+    width: 270px;
+    height: 340px;
     transform-style: preserve-3d;
     will-change: transform, opacity;
     border-radius: 16px;
