@@ -97,3 +97,245 @@ body {
   to { opacity: 1; transform: translateY(0); }
 }
 .fade-up { animation: fade-up 0.5s ease-out both; }
+
+  /* ---- immersive mentor plane ---- */
+  .mp-stage {
+    position: relative;
+    /* slightly taller than the viewport: a short pin gives scroll-driven
+       travel through the plane without trapping the wheel. */
+    height: 160vh;
+  }
+  .mp-sticky {
+    position: sticky;
+    top: 0;
+    height: 100vh;
+    overflow: hidden;
+    background:
+      radial-gradient(120% 90% at 50% 40%, color-mix(in srgb, var(--bg-soft) 70%, transparent), transparent 70%),
+      var(--bg);
+    border-top: 1px solid var(--border);
+    border-bottom: 1px solid var(--border);
+  }
+  .mp-stage-head {
+    position: absolute;
+    top: 22px; left: 24px;
+    z-index: 40;
+    pointer-events: none;
+  }
+  .mp-stage-kicker {
+    font-size: 0.7rem;
+    text-transform: uppercase;
+    letter-spacing: 0.12em;
+    color: var(--text-soft);
+    margin-bottom: 4px;
+  }
+  .mp-stage-title {
+    font-size: clamp(1.1rem, 2.2vw, 1.6rem);
+    font-weight: 600;
+    letter-spacing: -0.01em;
+    color: var(--text);
+    max-width: 22ch;
+  }
+  .mp-scene {
+    position: absolute;
+    inset: 0;
+    perspective: 1500px;
+    perspective-origin: 50% 50%;
+    /* pan-y: the page scrolls vertically through the stage; horizontal touch
+       does nothing so a stray swipe won't fight the experience. Mouse drag
+       still peeks because it's a pointer, not a touch scroll. */
+    touch-action: pan-y;
+    cursor: grab;
+    outline: none;
+  }
+  .mp-scene.mp-dragging { cursor: grabbing; }
+  .mp-world {
+    position: absolute;
+    inset: 0;
+    transform-style: preserve-3d;
+    will-change: transform;
+  }
+  .mp-card {
+    position: absolute;
+    top: 0;
+    left: 0;
+    width: 200px;
+    height: 250px;
+    transform-style: preserve-3d;
+    will-change: transform, opacity;
+    border-radius: 16px;
+    overflow: hidden;
+    background: #000;
+    box-shadow: 0 10px 30px rgba(0,0,0,0.35);
+    transition: box-shadow 0.25s ease;
+  }
+  .mp-card:focus-visible {
+    outline: 2px solid var(--maroon);
+    outline-offset: 6px;
+  }
+  .mp-card.mp-emph {
+    box-shadow: 0 22px 60px rgba(0,0,0,0.55), 0 0 0 1px color-mix(in srgb, var(--maroon) 40%, transparent);
+  }
+  .mp-card img {
+    position: absolute;
+    inset: 0;
+    width: 100%;
+    height: 100%;
+    object-fit: cover;
+    /* ponytail: dim + desaturate by default, sharpen on emphasis — mirrors the original mosaic */
+    filter: brightness(0.55) saturate(0.85);
+    transition: filter 0.3s ease;
+  }
+  .mp-card.mp-emph img { filter: brightness(1.05) saturate(1.1); }
+  .mp-cap {
+    position: absolute;
+    inset: 0;
+    display: flex;
+    flex-direction: column;
+    justify-content: flex-end;
+    padding: 16px;
+    gap: 2px;
+    pointer-events: none;
+    background: linear-gradient(180deg, rgba(0,0,0,0.05), rgba(0,0,0,0.62));
+  }
+  .mp-cat {
+    font-weight: 700;
+    text-transform: uppercase;
+    letter-spacing: 0.06em;
+    font-size: 1rem;
+    line-height: 1.15;
+    color: #fff;
+    text-shadow: 0 1px 8px rgba(0,0,0,0.7);
+  }
+  .mp-name {
+    font-size: 0.8rem;
+    color: rgba(255,255,255,0.82);
+    text-shadow: 0 1px 6px rgba(0,0,0,0.8);
+  }
+
+  /* low-power: drop expensive filters, keep the depth illusion via transforms only */
+  .mp-scene.mp-lowpower .mp-card img { filter: brightness(0.6); }
+
+  /* screen-reader-only stable list */
+  .mp-sr {
+    position: absolute;
+    width: 1px; height: 1px;
+    padding: 0; margin: -1px;
+    overflow: hidden; clip: rect(0,0,0,0);
+    white-space: nowrap; border: 0;
+  }
+
+  .mp-recenter {
+    position: absolute;
+    right: 16px;
+    bottom: 16px;
+    width: 38px; height: 38px;
+    border-radius: 50%;
+    border: 1px solid var(--border);
+    background: color-mix(in srgb, var(--bg) 75%, transparent);
+    backdrop-filter: blur(6px);
+    color: var(--text-soft);
+    font-size: 1rem;
+    cursor: pointer;
+    display: grid;
+    place-items: center;
+    transition: color 0.2s ease, border-color 0.2s ease, transform 0.2s ease;
+    z-index: 50;
+  }
+  .mp-recenter:hover { color: var(--maroon); border-color: var(--maroon); transform: scale(1.06); }
+
+  .mp-instructions {
+    position: absolute;
+    left: 16px; bottom: 18px;
+    font-size: 0.72rem;
+    letter-spacing: 0.03em;
+    color: var(--text-soft);
+    z-index: 50;
+    pointer-events: none;
+  }
+  .mp-instructions kbd {
+    font-family: ui-monospace, monospace;
+    font-size: 0.68rem;
+    padding: 1px 5px;
+    border: 1px solid var(--border);
+    border-radius: 4px;
+    background: var(--bg-soft);
+  }
+  .mp-hint {
+    position: absolute;
+    left: 50%; bottom: 22px;
+    transform: translateX(-50%) translateY(6px);
+    font-size: 0.75rem;
+    color: var(--maroon);
+    opacity: 0;
+    transition: opacity 0.25s ease, transform 0.25s ease;
+    z-index: 50;
+    pointer-events: none;
+  }
+  .mp-hint.mp-hint-on { opacity: 1; transform: translateX(-50%) translateY(0); }
+
+  /* fallback mosaic (reduced-motion) reuses the original .m-grid styles below */
+  .mp-fallback { padding: 0 4px; }
+
+  /* ---- original mosaic styles, retained for the reduced-motion fallback ---- */
+  .m-grid {
+    display: grid;
+    grid-template-columns: repeat(auto-fill, minmax(210px, 1fr));
+    gap: 4px;
+  }
+  .m-tile {
+    position: relative;
+    aspect-ratio: 16 / 10;
+    overflow: hidden;
+    background: #000;
+  }
+  .m-tile img {
+    position: absolute;
+    inset: 0;
+    width: 100%;
+    height: 100%;
+    object-fit: cover;
+    filter: brightness(0.5) saturate(0.85);
+    transition: filter 0.35s ease, transform 0.5s ease;
+  }
+  .m-tile:hover { z-index: 1; }
+  .m-tile:hover img { filter: brightness(1.05) saturate(1.1); transform: scale(1.05); }
+  .m-overlay {
+    position: absolute;
+    inset: 0;
+    display: flex;
+    flex-direction: column;
+    align-items: center;
+    justify-content: center;
+    text-align: center;
+    gap: 3px;
+    padding: 10px;
+    pointer-events: none;
+    background: linear-gradient(180deg, rgba(0,0,0,0.25), rgba(0,0,0,0.45));
+    transition: background 0.35s ease;
+  }
+  .m-tile:hover .m-overlay { background: linear-gradient(180deg, rgba(0,0,0,0.1), rgba(0,0,0,0.55)); }
+  .m-cat {
+    font-family: var(--font-sans);
+    font-weight: 700;
+    text-transform: uppercase;
+    letter-spacing: 0.06em;
+    font-size: 1.05rem;
+    line-height: 1.15;
+    color: #fff;
+    text-shadow: 0 1px 8px rgba(0,0,0,0.7);
+  }
+  .m-name {
+    font-size: 0.78rem;
+    color: rgba(255,255,255,0.78);
+    text-shadow: 0 1px 6px rgba(0,0,0,0.8);
+  }
+  .m-grid:hover .m-tile:not(:hover) img { filter: brightness(0.3) saturate(0.6); }
+
+  @media (prefers-reduced-motion: reduce) {
+    .m-tile img { transition: filter 0.2s ease; }
+    .m-tile:hover img { transform: none; }
+  }
+  @media (max-width: 640px) {
+    .mp-instructions { display: none; }
+  }

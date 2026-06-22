@@ -3,7 +3,9 @@ export const prerender = false;
 import Layout from '../layouts/Layout.astro';
 import GuideCard from '../components/GuideCard.astro';
 import KnowledgeMap from '../components/KnowledgeMap.astro';
+import MentorPlane from '../components/mentor-plane/MentorPlane.tsx';
 import { getDb, listPosts } from '../lib/db';
+import { MENTORS } from '../lib/mentors';
 
 const guides = await listPosts(getDb());
 ---
@@ -30,8 +32,8 @@ const guides = await listPosts(getDb());
   </div>
 
   <div class="intro-zoom">
-  <section class="max-w-6xl mx-auto px-6 pt-20 pb-14 fade-up">
-    <div class="grid lg:grid-cols-[0.9fr_1.1fr] gap-12 items-center">
+  <section class="hero-screen fade-up">
+    <div class="max-w-6xl mx-auto px-6 w-full grid lg:grid-cols-[0.9fr_1.1fr] gap-12 items-center">
       <div>
         <p class="text-xs uppercase tracking-wider mb-5" style="color: var(--text-soft);">McMaster · curated</p>
         <h1 class="text-5xl sm:text-6xl font-bold tracking-tight leading-[1.02]">
@@ -44,7 +46,7 @@ const guides = await listPosts(getDb());
           <a href="#guides" class="underline underline-offset-4" style="color: var(--maroon);">
             Explore guides →
           </a>
-          <a href="/mentors" class="hover:opacity-70 transition-opacity" style="color: var(--text-soft);">
+          <a href="#mentors" class="hover:opacity-70 transition-opacity" style="color: var(--text-soft);">
             Meet mentors
           </a>
         </div>
@@ -52,6 +54,15 @@ const guides = await listPosts(getDb());
 
       <KnowledgeMap />
     </div>
+    <a href="#mentors" class="hero-scroll-cue" aria-label="Scroll to meet mentors">
+      <span>Scroll</span>
+      <svg viewBox="0 0 24 24" width="18" height="18" aria-hidden="true"><path d="M12 5v14M6 13l6 6 6-6" fill="none" stroke="currentColor" stroke-width="1.6" stroke-linecap="round" stroke-linejoin="round"/></svg>
+    </a>
+  </section>
+
+  <!-- the site breathes: scroll past the hero and you fall into a living field of mentors -->
+  <section id="mentors" class="fade-up">
+    <MentorPlane mentors={MENTORS} kicker="The network" title="A field of mentors, not a directory." client:only="react" />
   </section>
 
   <section id="guides" class="max-w-3xl mx-auto px-6 pb-24">
@@ -110,6 +121,37 @@ const guides = await listPosts(getDb());
     }
     /* the site content gently zooms in behind the lifting veil */
     .intro-zoom { animation: intro-zoom 2.6s ease-in-out forwards; transform-origin: 50% 30%; }
+
+    /* hero fills the opening viewport so the page opens on a full screen,
+       then scroll carries you down into the mentor field. */
+    .hero-screen {
+      min-height: 100svh;
+      display: flex;
+      align-items: center;
+      justify-content: center;
+      position: relative;
+      padding-block: 5rem;
+    }
+    .hero-scroll-cue {
+      position: absolute;
+      left: 50%;
+      bottom: 1.6rem;
+      transform: translateX(-50%);
+      display: flex;
+      flex-direction: column;
+      align-items: center;
+      gap: 0.35rem;
+      font-size: 0.7rem;
+      letter-spacing: 0.12em;
+      text-transform: uppercase;
+      color: var(--text-soft);
+      opacity: 0.8;
+      transition: opacity 0.2s ease, color 0.2s ease;
+    }
+    .hero-scroll-cue svg { animation: hero-cue 2.2s ease-in-out infinite; }
+    .hero-scroll-cue:hover { opacity: 1; color: var(--maroon); }
+    @keyframes hero-cue { 0%, 100% { transform: translateY(0); opacity: 0.7; } 50% { transform: translateY(4px); opacity: 1; } }
+    @media (prefers-reduced-motion: reduce) { .hero-scroll-cue svg { animation: none; } }
 
     @keyframes intro-logo-l { from { opacity: 0; transform: translate(-9px, 9px); } to { opacity: 1; transform: none; } }
     @keyframes intro-logo-r { from { opacity: 0; transform: translate(9px, -9px); } to { opacity: 1; transform: none; } }
