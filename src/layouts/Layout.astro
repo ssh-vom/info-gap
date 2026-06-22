@@ -2,8 +2,10 @@
 import '../styles/global.css';
 import { ClientRouter } from 'astro:transitions';
 import { STREAMS } from '../streams';
+import { getUser } from '../lib/auth';
 const { title = 'InfoGap', description = 'Curated career knowledge from McMaster students and alumni.' } = Astro.props;
 const path = Astro.url.pathname;
+const user = await getUser(Astro.cookies);
 const isActive = (href: string) =>
   href === '/' ? path === '/' : path.startsWith(href);
 ---
@@ -48,13 +50,16 @@ const isActive = (href: string) =>
         <img src="/logo.svg" alt="" width="26" height="26" />
         <span>InfoGap</span>
       </a>
-      <label class="text-sm cursor-pointer" style="color: var(--maroon);">
-        Streams ▾
-        <select class="absolute opacity-0 w-px h-px" onchange="if(this.value) location.href=this.value">
-          <option value=""></option>
-          {STREAMS.map((s) => <option value={`/streams/${s.slug}/`}>{s.name}</option>)}
-        </select>
-      </label>
+      <div class="flex items-center gap-3">
+        <a href={user ? '/profile/new' : '/auth/linkedin'} class="text-sm" style="color: var(--maroon);">{user ? 'Profile' : 'Login'}</a>
+        <label class="text-sm cursor-pointer" style="color: var(--maroon);">
+          Streams ▾
+          <select class="absolute opacity-0 w-px h-px" onchange="if(this.value) location.href=this.value">
+            <option value=""></option>
+            {STREAMS.map((s) => <option value={`/streams/${s.slug}/`}>{s.name}</option>)}
+          </select>
+        </label>
+      </div>
     </nav>
 
     <div class="lg:flex">
@@ -90,7 +95,14 @@ const isActive = (href: string) =>
         </nav>
 
         <div class="mt-auto pt-8 text-xs" style="color: var(--text-soft);">
-          <div>~ Shivom</div>
+          {user ? (
+            <>
+              <a href="/profile/new" class="block font-medium" style="color: var(--text);">{user.name}</a>
+              <a href="/auth/logout" class="block mt-1 hover:opacity-70">Logout</a>
+            </>
+          ) : (
+            <a href="/auth/linkedin" class="font-medium" style="color: var(--maroon);">Login with LinkedIn</a>
+          )}
         </div>
       </aside>
 

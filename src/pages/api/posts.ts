@@ -1,5 +1,6 @@
 import type { APIRoute } from 'astro';
 import { getDb, upsertPost, deletePost } from '../../lib/db';
+import { getUser } from '../../lib/auth';
 import { STREAM_SLUGS } from '../../streams';
 
 export const prerender = false;
@@ -7,9 +8,8 @@ export const prerender = false;
 const bad = (msg: string) => new Response(JSON.stringify({ error: msg }), { status: 400 });
 const str = (v: unknown, max: number) => (typeof v === 'string' && v.trim() ? v.trim().slice(0, max) : '');
 
-// ponytail: no auth yet — anyone can write/delete. Validation is the only guard.
-// Gate (CF Access / verified-user check) drops in at the top of each handler. [[edit-posts-feature]]
-export const POST: APIRoute = async ({ request }) => {
+export const POST: APIRoute = async ({ request, cookies }) => {
+  if (!(await getUser(cookies))) return new Response(JSON.stringify({ error: 'login required' }), { status: 401 });
   let p: any;
   try {
     p = await request.json();
@@ -48,7 +48,8 @@ export const POST: APIRoute = async ({ request }) => {
   return new Response(JSON.stringify({ slug }), { status: 200, headers: { 'content-type': 'application/json' } });
 };
 
-export const DELETE: APIRoute = async ({ request }) => {
+export const DELETE: APIRoute = async ({ request, cookies }) => {
+  if (!(await getUser(cookies))) return new Response(JSON.stringify({ error: 'login required' }), { status: 401 });
   const slug = new URL(request.url).searchParams.get('slug') ?? '';
   if (!slug) return bad('slug required');
   await deletePost(getDb(), slug);

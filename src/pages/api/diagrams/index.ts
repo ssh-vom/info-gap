@@ -1,13 +1,13 @@
 import type { APIRoute } from 'astro';
 import { getDb, insertDiagram } from '../../../lib/db';
+import { getUser } from '../../../lib/auth';
 
 export const prerender = false;
 
 const bad = (msg: string) => new Response(JSON.stringify({ error: msg }), { status: 400 });
 
-// ponytail: no auth yet — anyone can create a diagram. Validation + size caps are the guard.
-// Verified-user gate drops in at the top here, same as api/posts.ts. [[edit-posts-feature]]
-export const POST: APIRoute = async ({ request }) => {
+export const POST: APIRoute = async ({ request, cookies }) => {
+  if (!(await getUser(cookies))) return new Response(JSON.stringify({ error: 'login required' }), { status: 401 });
   let p: any;
   try {
     p = await request.json();

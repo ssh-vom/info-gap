@@ -8,7 +8,7 @@ import react from '@astrojs/react';
 // https://astro.build/config
 // Static by default; DB-backed pages opt into SSR with `export const prerender = false`.
 export default defineConfig({
-  adapter: cloudflare({ platformProxy: { enabled: true } }),
+  adapter: cloudflare(/** @type {any} */ ({ platformProxy: { enabled: true } })),
   integrations: [react()],
   vite: {
     plugins: [tailwindcss()],

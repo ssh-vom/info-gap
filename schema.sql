@@ -18,3 +18,24 @@ CREATE TABLE IF NOT EXISTS diagrams (
   svg        TEXT NOT NULL,   -- exported SVG, served as an <img>
   created_at TEXT NOT NULL
 );
+
+CREATE TABLE IF NOT EXISTS profiles (
+  linkedin_sub TEXT PRIMARY KEY,
+  name         TEXT NOT NULL,
+  email        TEXT,
+  picture      TEXT,
+  headline     TEXT,
+  location     TEXT,
+  school       TEXT,
+  grad_year    TEXT,
+  program      TEXT,
+  linkedin_url TEXT,
+  website      TEXT,
+  bio          TEXT,
+  role_history TEXT NOT NULL DEFAULT '[]',
+  education    TEXT NOT NULL DEFAULT '[]',
+  skills       TEXT NOT NULL DEFAULT '[]',
+  interests    TEXT NOT NULL DEFAULT '[]',
+  created_at   TEXT NOT NULL,
+  updated_at   TEXT NOT NULL
+);

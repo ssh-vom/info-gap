@@ -15,3 +15,16 @@ alumnis, etc. I want everyone to know the paths available to them, from the ones
 navigated those challenges.
 
 ~ Shivom.
+
+## LinkedIn auth
+
+1. Create a LinkedIn app with redirect URLs:
+   - `http://localhost:4321/auth/linkedin/callback`
+   - `https://YOUR_DOMAIN/auth/linkedin/callback`
+2. Copy `.dev.vars.example` to `.dev.vars` and fill in the LinkedIn values.
+3. Apply D1 schema locally: `npx wrangler d1 execute infogap --local --file=schema.sql`
+4. For production, set secrets and run the schema remotely:
+   - `npx wrangler secret put LINKEDIN_CLIENT_ID`
+   - `npx wrangler secret put LINKEDIN_CLIENT_SECRET`
+   - `npx wrangler secret put AUTH_SECRET`
+   - `npx wrangler d1 execute infogap --remote --file=schema.sql`

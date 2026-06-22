@@ -2,20 +2,26 @@
 export const prerender = false;
 import Layout from '../../layouts/Layout.astro';
 import { STREAMS } from '../../streams';
-import { getDb, getPost } from '../../lib/db';
+import { getDb, getPost, getProfile } from '../../lib/db';
+import { getUser } from '../../lib/auth';
 import DiagramModal from '../../components/DiagramModal.tsx';
 import Overlay from '../../components/Overlay.astro';
 
+const user = await getUser(Astro.cookies);
+if (!user) return Astro.redirect('/auth/linkedin');
+const db = getDb();
+const profile = await getProfile(db, user.sub);
+if (!profile) return Astro.redirect('/profile/new');
 const slug = Astro.params.slug;
-const post = slug ? await getPost(getDb(), slug) : null;
+const post = slug ? await getPost(db, slug) : null;
 if (slug && !post) return new Response('Not found', { status: 404 });
 
 const today = new Date().toISOString().slice(0, 10);
 const v = {
   slug: post?.slug ?? '',
   title: post?.title ?? '',
-  author: post?.author ?? '',
-  role: post?.role ?? '',
+  author: post?.author ?? profile.name,
+  role: post?.role ?? profile.headline ?? '',
   stream: post?.stream ?? STREAMS[0].slug,
   tags: post?.tags.join(', ') ?? '',
   video: post?.video ?? '',
